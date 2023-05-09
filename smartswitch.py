@@ -2,6 +2,7 @@ import requests
 import json
 import time
 import discoverIP
+import argparse
 import paho.mqtt.client as mqtt
 
 smartswitch_instance_value = 0
@@ -287,6 +288,9 @@ if __name__ == '__main__':
     ips = discoverIP.discoverIPS()
     for ip in ips:
         print(ip)
+
+    role = discoverIP.attributeRole()
+    print(role)
     
     #get the smart switch and lightbulbs AE if already existed
     if get_CSE_IN(smart_switch_Container) is not None:

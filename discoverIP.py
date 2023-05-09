@@ -1,5 +1,6 @@
 from scapy.all import ARP, Ether, srp
 import socket
+import argparse
 
 def get_local_ip():
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
@@ -26,6 +27,18 @@ def discoverIPS():
     local_ip = get_local_ip()
     ips = discover_ips_on_network(local_ip)
     return ips
+
+def attributeRole():
+    parser = argparse.ArgumentParser(description="Enter the role of this instance (smartswitch or lightbulb1)")
+    parser.add_argument("role", type=str, help="Role of this instance")
+    args = parser.parse_args()
+
+    return args.role
+    if args.role == "smartswitch" or "lightbulb":
+        return args.role
+    else:
+        print("Invalid role. Please enter either 'smartswitch' or 'lightbulb'")
+        return null
 
 def main():
     local_ip = get_local_ip()
