@@ -1,6 +1,8 @@
 import requests
 import json
 import time
+import discoverIP
+import paho.mqtt.client as mqtt
 
 smartswitch_instance_value = 0
 lightbulb1_instance_value = 0
@@ -10,6 +12,16 @@ lightbulb2_instance_value = 0
 CSE_BASE = 'http://localhost:8080/cse-in'
 ORIGINATOR = 'CAdmin'
 
+cse_host = 'localhost'
+cse_port = '8080'
+cse_base = 'your_cse_base_name'
+api_key = 'your_api_key'
+remote_cse_id = 'remote_cse_id'
+remote_cse_url = 'http://remote_cse_host:remote_cse_port'
+
+url = f'http://{cse_host}:{cse_port}/{cse_base}'
+
+
 #define the request header
 HEADERS_GET = {
     'Content-Type': 'application/json',
@@ -17,7 +29,7 @@ HEADERS_GET = {
     'X-M2M-Origin': 'CAdmin',
     'X-M2M-RI': 'j7c9cmjc41',
     'X-M2M-RVI': '3',
-    'rcn': '4'  # Add this line
+    'rcn': '4' 
 }
 
 HEADERS_AE = {
@@ -254,21 +266,41 @@ smart_switch_state_url = f"{CSE_BASE}/smartswitch/state/smartswitch-instance_" +
 lightbulb1_state_url = f"{CSE_BASE}/lightbulb1/state/lightbulb1-instance_" + str(lightbulb1_instance_value)
 lightbulb2_state_url = f"{CSE_BASE}/lightbulb2/state/lightbulb2-instance_" + str(lightbulb2_instance_value)
 
+request_body_AE_smartswitch = {
+    "m2m:ae": {
+        "api": "N.smartswitch",
+        "poa": ["http://192.168.1.2:8080/smartswitch"],
+        "rn": "smartswitch",
+        "srv": ["3"],
+        "rr": False
+    }
+}
+
 
 
 
 #  Main loop
 if __name__ == '__main__':
 
+    localIP = discoverIP.get_local_ip()
+    print(localIP)
+    ips = discoverIP.discoverIPS()
+    for ip in ips:
+        print(ip)
+    
     #get the smart switch and lightbulbs AE if already existed
     if get_CSE_IN(smart_switch_Container) is not None:
         delete_application_entity(smart_switch_Container)
+        request_body_AE_smartswitch["m2m:ae"]["poa"] = "http://" + localIP + "/smartswitch"
+        create_application_entity(smart_switch_AE, request_body_AE_smartswitch)
     if get_CSE_IN(lightbulb1_Container) is not None:
        delete_application_entity(lightbulb1_Container)
     if get_CSE_IN(lightbulb2_Container) is not None:
         delete_application_entity(lightbulb2_Container)
 
 
+
+    
     #create application entity for smart switch and lightbulbs
     create_application_entity(smart_switch_AE, request_body_AE_smartswitch)
     create_application_entity(lightbulb1_AE, request_body_AE_lightbulb1)
@@ -325,108 +357,3 @@ if __name__ == '__main__':
             break
         else:
             print("Invalid input. Try again.")
-
-    #-------------------------------------TEST 0: CHANGING VALUES--------------------------------------------#
-
-    
-    #obtain the latest instance (by detecting the creation time (ct))
-    # change lightbulb value: lightbulb1 -> ligthbulb2
-    # create a new instance with the new value
-    '''get_container_length = int(repr(get_CSE_IN(smart_switch_Instance)['m2m:cnt']['cni']))
-    latest_instance = get_latest_instance(get_container_length, "smartswitch")
-    smartswitch_instance_name_value = get_container_length
-    request_body_instance_smartswitch["m2m:cin"]["con"] = json.dumps(change_value_smartswitch(latest_instance))
-    request_body_instance_smartswitch["m2m:cin"]["rn"] = "smartswitch-instance_" + str(smartswitch_instance_name_value)
-    create_container_instance(smart_switch_Instance, request_body_instance_smartswitch)'''
-
-    #obtain the latest instance (by detecting the creation time (ct))
-    # change lightbulb1 value: off -> on
-    # create a new instance with the new value
-    '''get_container_length = int(repr(get_CSE_IN(lightbulb1_Instance)['m2m:cnt']['cni']))
-    latest_instance = get_latest_instance(get_container_length, "lightbulb1")
-    lightbulb_instance_name_value = get_container_length
-    request_body_instance_lightbulb1["m2m:cin"]["con"] = json.dumps(change_value_lightbulb(latest_instance))
-    request_body_instance_lightbulb1["m2m:cin"]["rn"] = "lightbulb1-instance_" + str(lightbulb_instance_name_value)
-    create_container_instance(lightbulb1_Instance, request_body_instance_lightbulb1)'''
-
-    #obtain the latest instance (by detecting the creation time (ct))
-    # change lightbulb2 value: off -> on
-    # create a new instance with the new value
-    '''get_container_length = int(repr(get_CSE_IN(lightbulb2_Instance)['m2m:cnt']['cni']))
-    latest_instance = get_latest_instance(get_container_length, "lightbulb2")
-    lightbulb_instance_name_value = get_container_length
-    request_body_instance_lightbulb2["m2m:cin"]["con"] = json.dumps(change_value_lightbulb(latest_instance))
-    request_body_instance_lightbulb2["m2m:cin"]["rn"] = "lightbulb2-instance_" + str(lightbulb_instance_name_value)
-    create_container_instance(lightbulb2_Instance, request_body_instance_lightbulb2)'''
-
-    '''#-------------------------------------TEST 1: TURN ON LIGHTBULB1--------------------------------------------#
-    #Switch: Lightbulb1
-    #Lightbulb1: ON
-    #Lightbulb2: OFF
-
-    get_container_length = int(repr(get_CSE_IN(lightbulb1_Instance)['m2m:cnt']['cni']))
-    latest_instance = get_latest_instance(get_container_length, "lightbulb1")
-    lightbulb_instance_name_value = get_container_length
-    request_body_instance_lightbulb1["m2m:cin"]["con"] = json.dumps(change_value_lightbulb(latest_instance))
-    request_body_instance_lightbulb1["m2m:cin"]["rn"] = "lightbulb1-instance_" + str(lightbulb_instance_name_value)
-    create_container_instance(lightbulb1_Instance, request_body_instance_lightbulb1)
-
-    #-------------------------------------TEST 2: TURN OFF LIGHTBULB1--------------------------------------------#
-    #Switch: Lightbulb1
-    #Lightbulb1: OFF
-    #Lightbulb2: OFF
-
-    get_container_length = int(repr(get_CSE_IN(lightbulb1_Instance)['m2m:cnt']['cni']))
-    latest_instance = get_latest_instance(get_container_length, "lightbulb1")
-    lightbulb_instance_name_value = get_container_length
-    request_body_instance_lightbulb1["m2m:cin"]["con"] = json.dumps(change_value_lightbulb(latest_instance))
-    request_body_instance_lightbulb1["m2m:cin"]["rn"] = "lightbulb1-instance_" + str(lightbulb_instance_name_value)
-    create_container_instance(lightbulb1_Instance, request_body_instance_lightbulb1)
-
-    #-----------------------------------TEST 3: CHANGE LIGHTBULB1 TO LIGHTBULB2----------------------------------#
-    #Switch: Lightbulb2
-    #Lightbulb1: OFF
-    #Lightbulb2: OFF
-
-    get_container_length = int(repr(get_CSE_IN(smart_switch_Instance)['m2m:cnt']['cni']))
-    latest_instance = get_latest_instance(get_container_length, "smartswitch")
-    smartswitch_instance_name_value = get_container_length
-    request_body_instance_smartswitch["m2m:cin"]["con"] = json.dumps(change_value_smartswitch(latest_instance))
-    request_body_instance_smartswitch["m2m:cin"]["rn"] = "smartswitch-instance_" + str(smartswitch_instance_name_value)
-    create_container_instance(smart_switch_Instance, request_body_instance_smartswitch)
-
-    #-------------------------------------TEST 4: TURN ON LIGHTBULB2---------------------------------------------#
-    #Switch: Lightbulb2
-    #Lightbulb1: OFF
-    #Lightbulb2: ON
-
-    get_container_length = int(repr(get_CSE_IN(lightbulb2_Instance)['m2m:cnt']['cni']))
-    latest_instance = get_latest_instance(get_container_length, "lightbulb2")
-    lightbulb_instance_name_value = get_container_length
-    request_body_instance_lightbulb2["m2m:cin"]["con"] = json.dumps(change_value_lightbulb(latest_instance))
-    request_body_instance_lightbulb2["m2m:cin"]["rn"] = "lightbulb2-instance_" + str(lightbulb_instance_name_value)
-    create_container_instance(lightbulb2_Instance, request_body_instance_lightbulb2)
-
-    #-----------------------------------TEST 5: CHANGE LIGHTBULB2 TO LIGHTBULB1----------------------------------#
-    #Switch: Lightbulb1
-    #Lightbulb1: OFF
-    #Lightbulb2: ON
-
-    get_container_length = int(repr(get_CSE_IN(smart_switch_Instance)['m2m:cnt']['cni']))
-    latest_instance = get_latest_instance(get_container_length, "smartswitch")
-    smartswitch_instance_name_value = get_container_length
-    request_body_instance_smartswitch["m2m:cin"]["con"] = json.dumps(change_value_smartswitch(latest_instance))
-    request_body_instance_smartswitch["m2m:cin"]["rn"] = "smartswitch-instance_" + str(smartswitch_instance_name_value)
-    create_container_instance(smart_switch_Instance, request_body_instance_smartswitch)
-
-    #-----------------------------------TEST 6: TURN ON LIGHTBULB1-----------------------------------------------#
-    #Switch: Lightbulb1
-    #Lightbulb1: ON
-    #Lightbulb2: ON
-
-    get_container_length = int(repr(get_CSE_IN(lightbulb1_Instance)['m2m:cnt']['cni']))
-    latest_instance = get_latest_instance(get_container_length, "lightbulb1")
-    lightbulb_instance_name_value = get_container_length
-    request_body_instance_lightbulb1["m2m:cin"]["con"] = json.dumps(change_value_lightbulb(latest_instance))
-    request_body_instance_lightbulb1["m2m:cin"]["rn"] = "lightbulb1-instance_" + str(lightbulb_instance_name_value)
-    create_container_instance(lightbulb1_Instance, request_body_instance_lightbulb1)'''
