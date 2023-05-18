@@ -50,7 +50,7 @@ HEADERS_Instance = {
 request_body_AE_smartswitch = {
     "m2m:ae": {
         "api": "N.smartswitch",
-        "poa": ["http://192.168.1.2:8080/smartswitch"],
+        "poa": ["http://172.22.196.204:8000/cse-in/smartswitch"],
         "rn": "smartswitch",
         "srv": ["3"],
         "rr": False
@@ -60,7 +60,7 @@ request_body_AE_smartswitch = {
 request_body_AE_lightbulb1 = {
     "m2m:ae": {
         "api": "N.lightbulb1",
-        "poa": ["http://192.168.1.3:8080/lightbulb1"],
+        "poa": ["http://192.168.1.3:8000/cse-in/lightbulb1"],
         "rn": "lightbulb1",
         "srv": ["3"],
         "rr": False
@@ -70,7 +70,7 @@ request_body_AE_lightbulb1 = {
 request_body_AE_lightbulb2 = {
     "m2m:ae": {
         "api": "N.lightbulb2",
-        "poa": ["http://192.168.1.4:8080/lightbulb2"],
+        "poa": ["http://192.168.1.4:8000/cse-in/lightbulb2"],
         "rn": "lightbulb2",
         "srv": ["3"],
         "rr": False
@@ -240,105 +240,100 @@ def delete_container_instance(url):
 
 
 
-#Define the AE, container and container instance  URLs
-smart_switch_AE = f"{CSE_BASE}"
-lightbulb1_AE = f"{CSE_BASE}"
-lightbulb2_AE = f"{CSE_BASE}"
-
-smart_switch_Container = f"{CSE_BASE}/smartswitch"
-lightbulb1_Container = f"{CSE_BASE}/lightbulb1"
-lightbulb2_Container = f"{CSE_BASE}/lightbulb2"
-
-smart_switch_Instance = f"{CSE_BASE}/smartswitch/state"
-lightbulb1_Instance = f"{CSE_BASE}/lightbulb1/state"
-lightbulb2_Instance = f"{CSE_BASE}/lightbulb2/state"
-
-smart_switch_state_url = f"{CSE_BASE}/smartswitch/state/smartswitch-instance_" + str(smartswitch_instance_value)
-lightbulb1_state_url = f"{CSE_BASE}/lightbulb1/state/lightbulb1-instance_" + str(lightbulb1_instance_value)
-lightbulb2_state_url = f"{CSE_BASE}/lightbulb2/state/lightbulb2-instance_" + str(lightbulb2_instance_value)
-
 #  Main loop
 if __name__ == '__main__':
-
     localIP = discoverIP.get_local_ip()
     print(localIP)
 
-    ips = discoverIP.discoverIPS()
-    ips_onem2m = []
-    for ip in ips:
-        print(ip)
-        try:
-            ips_onem2m.append(requests.get("http://" + str(localIP) + ":8000/cse-in", headers=HEADERS_Instance).json())
+    CSE_BASE = "http://" + localIP + ":8000/cse-in"
 
-        except requests.exceptions.RequestException as e:
-            print("Error:", e)
-
-    print(ips_onem2m[0])
     role = discoverIP.attributeRole()
-    print(role)
     
-    #get the smart switch and lightbulbs AE if already existed
-    if get_CSE_IN(smart_switch_Container) is not None:
-        delete_application_entity(smart_switch_Container)
-    if get_CSE_IN(lightbulb1_Container) is not None:
-       delete_application_entity(lightbulb1_Container)
-    if get_CSE_IN(lightbulb2_Container) is not None:
-        delete_application_entity(lightbulb2_Container)
-    
-    #create application entity for smart switch and lightbulbs
-    request_body_AE_smartswitch["m2m:ae"]["poa"] = ["http://" + localIP + "/smartswitch"]
-    create_application_entity(smart_switch_AE, request_body_AE_smartswitch)
-    create_application_entity(lightbulb1_AE, request_body_AE_lightbulb1)
-    create_application_entity(lightbulb2_AE, request_body_AE_lightbulb2)
+    #SMARTSWITCH
+    if (role == "smartswitch"):
+        #get the smart switch and lightbulbs AE if already existed
+        smart_switch_Container = f"{CSE_BASE}/smartswitch"
+        if get_CSE_IN(smart_switch_Container) is not None:
+            delete_application_entity(smart_switch_Container) 
 
-    #create a container for each AE
-    create_container(smart_switch_Container, request_body_container)
-    create_container(lightbulb1_Container, request_body_container)
-    create_container(lightbulb2_Container, request_body_container)
+        #create application entity for smart switch and lightbulbs
+        smart_switch_AE = f"{CSE_BASE}"
+        request_body_AE_smartswitch["m2m:ae"]["poa"] = [CSE_BASE + "/smartswitch"]
+        create_application_entity(smart_switch_AE, request_body_AE_smartswitch)
 
-    #create a container instance for each AE container
-    create_container_instance(smart_switch_Instance, request_body_instance_smartswitch)
-    create_container_instance(lightbulb1_Instance, request_body_instance_lightbulb1)
-    create_container_instance(lightbulb2_Instance, request_body_instance_lightbulb2)
+        #create a container for each AE
+        smart_switch_Container = f"{CSE_BASE}/smartswitch"
+        create_container(smart_switch_Container, request_body_container)
+
+        #create a container instance for each AE container
+        smart_switch_Instance = f"{CSE_BASE}/smartswitch/state"
+        create_container_instance(smart_switch_Instance, request_body_instance_smartswitch)
+
+        ips = discoverIP.discoverIPS()
+        ips_onem2m = []
+        for ip in ips:
+            print(ip)
+            try:
+                ips_onem2m.append(requests.get(smart_switch_Container, headers=HEADERS_GET).json())
+
+            except requests.exceptions.RequestException as e:
+                print("Error:", e)
+
+        print(ips_onem2m[0])
 
 
- #-----------------------------------TEST X: WITH BUTTONS--------------------------------------------------#
-
-
-    while True:
-        print("Press '1' for ON/OFF, '2' for changing the controlled lightbulb, 'q' to quit")
-        button_press = input()
-        
-        get_container_length = int(repr(get_CSE_IN(smart_switch_Instance)['m2m:cnt']['cni']))
-        latest_instance = get_latest_instance(get_container_length, "smartswitch")
-        request_body_instance_smartswitch["m2m:cin"]["con"]
-        if button_press == '1':
-            current_state = json.loads(latest_instance['m2m:cin']['con'])
-
-            if current_state['controlledLight'] == 'lightbulb1':
-                get_container_length = int(repr(get_CSE_IN(lightbulb1_Instance)['m2m:cnt']['cni']))
-                latest_instance = get_latest_instance(get_container_length, "lightbulb1")
-                lightbulb_instance_name_value = get_container_length
-                request_body_instance_lightbulb1["m2m:cin"]["con"] = json.dumps(change_value_lightbulb(latest_instance))
-                request_body_instance_lightbulb1["m2m:cin"]["rn"] = "lightbulb1-instance_" + str(lightbulb_instance_name_value)
-                create_container_instance(lightbulb1_Instance, request_body_instance_lightbulb1)
-            elif current_state['controlledLight'] == 'lightbulb2':
-                get_container_length = int(repr(get_CSE_IN(lightbulb2_Instance)['m2m:cnt']['cni']))
-                latest_instance = get_latest_instance(get_container_length, "lightbulb2")
-                lightbulb_instance_name_value = get_container_length
-                request_body_instance_lightbulb2["m2m:cin"]["con"] = json.dumps(change_value_lightbulb(latest_instance))
-                request_body_instance_lightbulb2["m2m:cin"]["rn"] = "lightbulb2-instance_" + str(lightbulb_instance_name_value)
-                create_container_instance(lightbulb2_Instance, request_body_instance_lightbulb2)
-            else:
-                print("Error changing lightbulb")
-        elif button_press == '2':
+        while True:
+            print("Press '1' for ON/OFF, '2' for changing the controlled lightbulb, 'q' to quit")
+            button_press = input()
+            
+            smart_switch_Instance = f"{CSE_BASE}/smartswitch/state"   
             get_container_length = int(repr(get_CSE_IN(smart_switch_Instance)['m2m:cnt']['cni']))
             latest_instance = get_latest_instance(get_container_length, "smartswitch")
-            smartswitch_instance_name_value = get_container_length
-            request_body_instance_smartswitch["m2m:cin"]["con"] = json.dumps(change_value_smartswitch(latest_instance))
-            request_body_instance_smartswitch["m2m:cin"]["rn"] = "smartswitch-instance_" + str(smartswitch_instance_name_value)
-            create_container_instance(smart_switch_Instance, request_body_instance_smartswitch)
-        elif button_press == 'q':
-            break
-        else:
-            print("Invalid input. Try again.")
+
+            if button_press == '1':
+                current_state = json.loads(latest_instance['m2m:cin']['con'])
+
+                lightbulb_Instance = f"{CSE_BASE}/lightbulb/state"
+
+                if current_state['controlledLight'].startswith('lightbulb'):
+                    get_container_length = int(repr(get_CSE_IN(lightbulb_Instance)['m2m:cnt']['cni']))
+                    latest_instance = get_latest_instance(get_container_length, "lightbulb")
+                    lightbulb_instance_name_value = get_container_length
+                    request_body_instance_lightbulb1["m2m:cin"]["con"] = json.dumps(change_value_lightbulb(latest_instance))
+                    request_body_instance_lightbulb1["m2m:cin"]["rn"] = "lightbulb1-instance_" + str(lightbulb_instance_name_value)
+                    create_container_instance(lightbulb_Instance, request_body_instance_lightbulb1)
+                else:
+                    print("Error changing lightbulb")
+            elif button_press == '2':
+                get_container_length = int(repr(get_CSE_IN(smart_switch_Instance)['m2m:cnt']['cni']))
+                latest_instance = get_latest_instance(get_container_length, "smartswitch")
+                smartswitch_instance_name_value = get_container_length
+                request_body_instance_smartswitch["m2m:cin"]["con"] = json.dumps(change_value_smartswitch(latest_instance))
+                request_body_instance_smartswitch["m2m:cin"]["rn"] = "smartswitch-instance_" + str(smartswitch_instance_name_value)
+                create_container_instance(smart_switch_Instance, request_body_instance_smartswitch)
+            elif button_press == 'q':
+                break
+            else:
+                print("Invalid input. Try again.")
+  
+    #LIGHTBULB
+    elif(role == "lightbulb"):
+        lightbulb_Container = f"{CSE_BASE}/lightbulb"
+        if get_CSE_IN(lightbulb_Container) is not None:
+            delete_application_entity(lightbulb_Container)
+
+        #create application entity for smart switch and lightbulbs  
+        lightbulb1_AE = f"{CSE_BASE}"
+        request_body_AE_lightbulb1["m2m:ae"]["poa"] = [CSE_BASE + "/lightbulb"]
+        create_application_entity(lightbulb1_AE, request_body_AE_lightbulb1)
+
+        #create a container for each AE
+        lightbulb_Container = f"{CSE_BASE}/lightbulb"
+        create_container(lightbulb_Container, request_body_container)
+
+        #create a container instance for each AE container
+        lightbulb_Instance = f"{CSE_BASE}/lightbulb/state"
+        create_container_instance(lightbulb_Instance, request_body_instance_lightbulb1)
+
+
+

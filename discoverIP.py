@@ -4,10 +4,10 @@ import argparse
 
 def get_local_ip():
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-        s.connect(("8.8.8.8", 80))
+        s.connect(("8.8.8.8", 8000))
         return s.getsockname()[0]
 
-def discover_ips_on_network(local_ip):
+def discover_ips_on_network(local_ip): 
     network_prefix = '.'.join(local_ip.split('.')[:-1])
     target_ip = f"{network_prefix}.0/24"
     arp = ARP(pdst=target_ip)
@@ -15,7 +15,6 @@ def discover_ips_on_network(local_ip):
     packet = ether / arp
 
     result = srp(packet, timeout=3, verbose=0)[0]
-
     ips = []
     for _, received in result:
         if received.psrc != local_ip:
@@ -24,7 +23,7 @@ def discover_ips_on_network(local_ip):
     return ips
 
 def discoverIPS():
-    local_ip = get_local_ip()
+    local_ip = get_local_ip() 
     ips = discover_ips_on_network(local_ip)
     return ips
 
