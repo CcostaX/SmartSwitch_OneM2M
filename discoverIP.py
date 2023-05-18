@@ -1,6 +1,6 @@
-from scapy.all import ARP, Ether, srp
-import socket
 import argparse
+import nmap
+import socket
 
 def get_local_ip():
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
@@ -10,15 +10,14 @@ def get_local_ip():
 def discover_ips_on_network(local_ip): 
     network_prefix = '.'.join(local_ip.split('.')[:-1])
     target_ip = f"{network_prefix}.0/24"
-    arp = ARP(pdst=target_ip)
-    ether = Ether(dst="ff:ff:ff:ff:ff:ff")
-    packet = ether / arp
+    
+    nm = nmap.PortScanner()
+    #nm.scan(hosts=target_ip, arguments='-n -sP -PE -PA21,23,80,3389')
+    #ips = [host for host in nm.all_hosts() if host != local_ip]
 
-    result = srp(packet, timeout=3, verbose=0)[0]
-    ips = []
-    for _, received in result:
-        if received.psrc != local_ip:
-            ips.append(received.psrc)
+    nm.scan(hosts=target_ip, arguments='-n -sS -p 8000')
+    ips = [host for host in nm.all_hosts() if nm[host].has_tcp(8000) and nm[host]['tcp'][8000]['state'] == 'open' and host != local_ip]
+
 
     return ips
 
@@ -28,16 +27,15 @@ def discoverIPS():
     return ips
 
 def attributeRole():
-    parser = argparse.ArgumentParser(description="Enter the role of this instance (smartswitch or lightbulb1)")
+    parser = argparse.ArgumentParser(description="Enter the role of this instance (smartswitch or lightbulb)")
     parser.add_argument("role", type=str, help="Role of this instance")
     args = parser.parse_args()
 
-    return args.role
     if args.role == "smartswitch" or "lightbulb":
         return args.role
     else:
         print("Invalid role. Please enter either 'smartswitch' or 'lightbulb'")
-        return null
+        return None
 
 def main():
     local_ip = get_local_ip()

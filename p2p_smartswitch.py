@@ -250,7 +250,7 @@ if __name__ == '__main__':
     role = discoverIP.attributeRole()
     
     #SMARTSWITCH
-    if (role == "smartswitch"):
+    if (role == "smartswitch" or role == "switch"):
         #get the smart switch and lightbulbs AE if already existed
         smart_switch_Container = f"{CSE_BASE}/smartswitch"
         if get_CSE_IN(smart_switch_Container) is not None:
@@ -270,16 +270,19 @@ if __name__ == '__main__':
         create_container_instance(smart_switch_Instance, request_body_instance_smartswitch)
 
         ips = discoverIP.discoverIPS()
+        print(ips)
         ips_onem2m = []
         for ip in ips:
             print(ip)
             try:
+                print(smart_switch_Container)
                 ips_onem2m.append(requests.get(smart_switch_Container, headers=HEADERS_GET).json())
 
             except requests.exceptions.RequestException as e:
                 print("Error:", e)
 
-        print(ips_onem2m[0])
+        if (ips_onem2m is not None):
+            print(ips_onem2m)
 
 
         while True:
