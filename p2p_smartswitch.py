@@ -57,21 +57,11 @@ request_body_AE_smartswitch = {
     }
 }
 
-request_body_AE_lightbulb1 = {
+request_body_AE_lightbulb = {
     "m2m:ae": {
-        "api": "N.lightbulb1",
-        "poa": ["http://192.168.1.3:8000/cse-in/lightbulb1"],
-        "rn": "lightbulb1",
-        "srv": ["3"],
-        "rr": False
-    }
-}
-
-request_body_AE_lightbulb2 = {
-    "m2m:ae": {
-        "api": "N.lightbulb2",
-        "poa": ["http://192.168.1.4:8000/cse-in/lightbulb2"],
-        "rn": "lightbulb2",
+        "api": "N.lightbulb",
+        "poa": ["http://192.168.1.3:8000/cse-in/lightbulb"],
+        "rn": "lightbulb",
         "srv": ["3"],
         "rr": False
     }
@@ -96,19 +86,11 @@ request_body_instance_smartswitch = {
     }
 }
 
-request_body_instance_lightbulb1 = {
+request_body_instance_lightbulb = {
     "m2m:cin": {
         "cnf": "text/plain:0",
         "con": "{\"state\": \"off\"}",
-        "rn": "lightbulb1-instance_" + str(lightbulb1_instance_value) + ""
-    }
-}
-
-request_body_instance_lightbulb2 = {
-    "m2m:cin": {
-        "cnf": "text/plain:0",
-        "con": "{\"state\": \"off\"}",
-        "rn": "lightbulb2-instance_" + str(lightbulb2_instance_value) + ""
+        "rn": "lightbulb-instance_" + str(lightbulb1_instance_value) + ""
     }
 }
 
@@ -272,9 +254,11 @@ if __name__ == '__main__':
         ips = discoverIP.discoverIPS()
         print(ips)
         ips_onem2m = []
+        lightbulb_Container = f"{CSE_BASE}/lightbulb"
         for ip in ips:
             print(ip)
             try:
+                lightbulb_Container = CSE_BASE = "http://" + ip + ":8000/cse-in/lightbulb"
                 print(smart_switch_Container)
                 ips_onem2m.append(requests.get(smart_switch_Container, headers=HEADERS_GET).json())
 
@@ -302,9 +286,9 @@ if __name__ == '__main__':
                     get_container_length = int(repr(get_CSE_IN(lightbulb_Instance)['m2m:cnt']['cni']))
                     latest_instance = get_latest_instance(get_container_length, "lightbulb")
                     lightbulb_instance_name_value = get_container_length
-                    request_body_instance_lightbulb1["m2m:cin"]["con"] = json.dumps(change_value_lightbulb(latest_instance))
-                    request_body_instance_lightbulb1["m2m:cin"]["rn"] = "lightbulb1-instance_" + str(lightbulb_instance_name_value)
-                    create_container_instance(lightbulb_Instance, request_body_instance_lightbulb1)
+                    request_body_instance_lightbulb["m2m:cin"]["con"] = json.dumps(change_value_lightbulb(latest_instance))
+                    request_body_instance_lightbulb["m2m:cin"]["rn"] = "lightbulb1-instance_" + str(lightbulb_instance_name_value)
+                    create_container_instance(lightbulb_Instance, request_body_instance_lightbulb)
                 else:
                     print("Error changing lightbulb")
             elif button_press == '2':
@@ -326,9 +310,9 @@ if __name__ == '__main__':
             delete_application_entity(lightbulb_Container)
 
         #create application entity for smart switch and lightbulbs  
-        lightbulb1_AE = f"{CSE_BASE}"
-        request_body_AE_lightbulb1["m2m:ae"]["poa"] = [CSE_BASE + "/lightbulb"]
-        create_application_entity(lightbulb1_AE, request_body_AE_lightbulb1)
+        lightbulb_AE = f"{CSE_BASE}"
+        request_body_AE_lightbulb["m2m:ae"]["poa"] = [CSE_BASE + "/lightbulb"]
+        create_application_entity(lightbulb_AE, request_body_AE_lightbulb)
 
         #create a container for each AE
         lightbulb_Container = f"{CSE_BASE}/lightbulb"
@@ -336,7 +320,7 @@ if __name__ == '__main__':
 
         #create a container instance for each AE container
         lightbulb_Instance = f"{CSE_BASE}/lightbulb/state"
-        create_container_instance(lightbulb_Instance, request_body_instance_lightbulb1)
+        create_container_instance(lightbulb_Instance, request_body_instance_lightbulb)
 
 
 
