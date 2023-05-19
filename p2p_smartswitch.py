@@ -335,7 +335,7 @@ if __name__ == '__main__':
         #create_subscription(smart_switch_Instance, request_body_subscription)
         
 
-        '''ips = discoverIP.discoverIPS()
+        ips = discoverIP.discoverIPS()
         print(ips)
         ips_onem2m = []
         lightbulb_Container = f"{CSE_BASE}/lightbulb"
@@ -386,7 +386,7 @@ if __name__ == '__main__':
                 break
             else:
                 print("Invalid input. Try again.")
-  '''
+  
     #LIGHTBULB
     elif(role == "lightbulb"):
         lightbulb_Container = f"{CSE_BASE}/lightbulb"
