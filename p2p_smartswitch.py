@@ -2,13 +2,18 @@ import requests
 import json
 import time
 import discoverIP
-import argparse
 import paho.mqtt.client as mqtt
+import threading
 
 smartswitch_instance_value = 0
 lightbulb1_instance_value = 0
 lightbulb2_instance_value = 0
 
+#get current time
+current_time = time.localtime()
+date_str = time.strftime("%Y-%m-%d %H:%M:%S", current_time)
+
+#-------------------------------------------------------------------------#
 # Constants
 CSE_BASE = 'http://localhost:8000/cse-in'
 ORIGINATOR = 'CAdmin'
@@ -46,6 +51,17 @@ HEADERS_Instance = {
     'X-M2M-RVI': '3'
 }
 
+HEADERS_Subscription = {
+    'Content-Type': 'application/json;ty=23',
+    'Accept': 'application/json',
+    'X-M2M-Origin': 'CAdmin',
+    'X-M2M-RI': 'ysge7e8sxy',
+    'X-M2M-RVI': '3'
+}
+#-------------------------------------------------------------------------#
+
+
+
 #define the request body 
 request_body_AE_smartswitch = {
     "m2m:ae": {
@@ -75,9 +91,6 @@ request_body_container = {
     }
 }
 
-current_time = time.localtime()
-date_str = time.strftime("%Y-%m-%d %H:%M:%S", current_time)
-
 request_body_instance_smartswitch = {
      "m2m:cin": {
         "cnf": "text/plain:0",
@@ -94,8 +107,27 @@ request_body_instance_lightbulb = {
     }
 }
 
-# Define helper functions for getting and creating resources
+request_body_subscription = {
+    "m2m:sub": {
+        "enc": {
+            "net": [
+                1,
+                2,
+                3,
+                4
+            ]
+        },
+        "nu": [
+            "http://192.168.1.3:8000/bulb"
+        ],
+        "rn": "switch"
+    }
+}
 
+#-------------------------------------------------------------------------#
+
+
+# Define helper functions for getting and creating resources
 def get_resource(url):
     response = requests.get(url, headers=HEADERS_Instance)
     if response.status_code == 200:
@@ -214,22 +246,67 @@ def delete_container_instance(url):
     else:
         print(f"Error deleting resource: {response.status_code}")
 
+# subscription (POST)
+def create_subscription(url, data):
+    response = requests.post(url, headers=HEADERS_Subscription, data=json.dumps(data))
+    if response.status_code == 201:  # 201 Created
+        print("Created successfully")
+        return json.loads(response.text)
+    else:
+        print(f"Error creating resource: {response.status_code}")
+        print(response.text)
+        return None
+#-------------------------------------------------------------------------#
+
+
+
+
+#MQTT
+#-------------------------------------------------------------------------#
+# Define MQTT client
+client = mqtt.Client()
+
+def on_connect(client, userdata, flags, rc):
+    print('Connected to MQTT broker')
+  
+
+
+def on_message(client, userdata, msg):
+    try:
+        payload = json.loads(msg.payload)  # this line can throw an error if payload is not valid JSON
+        print(f"Topic: {msg.topic} Message: {payload}")
+    except json.JSONDecodeError:
+        print(f"Topic: {msg.topic} Message: {msg.payload} is not a valid JSON")
+
+
+#-------------------------------------------------------------------------#
 
 
 
 
 
-
-
-
-#  Main loop
+#  MAIN LOOP
 if __name__ == '__main__':
     localIP = discoverIP.get_local_ip()
     print(localIP)
-
     CSE_BASE = "http://" + localIP + ":8000/cse-in"
 
+    #Get role
     role = discoverIP.attributeRole()
+
+    # MQTT Broker URL and Port
+    broker_url = localIP
+    broker_port = 1883 
+
+    # Set the callback functions
+    client.on_connect = on_connect
+    client.on_message = on_message
+
+    # Connect to the MQTT broker
+    client.connect(broker_url, broker_port, keepalive=60)
+    client.loop_start()
+    client.subscribe("switch")
+    client.publish("switch", json.dumps("Hello, MQTT!"))
     
     #SMARTSWITCH
     if (role == "smartswitch" or role == "switch"):
@@ -238,29 +315,36 @@ if __name__ == '__main__':
         if get_CSE_IN(smart_switch_Container) is not None:
             delete_application_entity(smart_switch_Container) 
 
-        #create application entity for smart switch and lightbulbs
+        #create application entity
         smart_switch_AE = f"{CSE_BASE}"
         request_body_AE_smartswitch["m2m:ae"]["poa"] = [CSE_BASE + "/smartswitch"]
         create_application_entity(smart_switch_AE, request_body_AE_smartswitch)
 
-        #create a container for each AE
+        #create a container
         smart_switch_Container = f"{CSE_BASE}/smartswitch"
         create_container(smart_switch_Container, request_body_container)
 
-        #create a container instance for each AE container
+        #create a container instance
         smart_switch_Instance = f"{CSE_BASE}/smartswitch/state"
         create_container_instance(smart_switch_Instance, request_body_instance_smartswitch)
 
-        ips = discoverIP.discoverIPS()
+        #create subscription
+        #request_body_subscription["m2m:sub"]["nu"] = ["http://" + "localhost" + ":1400/monitor"]
+       #request_body_subscription["m2m:sub"]["rn"] = role
+       # print(request_body_subscription)
+        #create_subscription(smart_switch_Instance, request_body_subscription)
+        
+
+        '''ips = discoverIP.discoverIPS()
         print(ips)
         ips_onem2m = []
         lightbulb_Container = f"{CSE_BASE}/lightbulb"
         for ip in ips:
             print(ip)
             try:
-                lightbulb_Container = CSE_BASE = "http://" + ip + ":8000/cse-in/lightbulb"
-                print(smart_switch_Container)
-                ips_onem2m.append(requests.get(smart_switch_Container, headers=HEADERS_GET).json())
+                lightbulb_Container = CSE_BASE = "ws://" + ip + ":8000/cse-in/lightbulb"
+                print(lightbulb_Container)
+                ips_onem2m.append(requests.get(lightbulb_Container, headers=HEADERS_GET).json())
 
             except requests.exceptions.RequestException as e:
                 print("Error:", e)
@@ -302,7 +386,7 @@ if __name__ == '__main__':
                 break
             else:
                 print("Invalid input. Try again.")
-  
+  '''
     #LIGHTBULB
     elif(role == "lightbulb"):
         lightbulb_Container = f"{CSE_BASE}/lightbulb"
