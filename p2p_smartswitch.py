@@ -305,8 +305,6 @@ if __name__ == '__main__':
     # Connect to the MQTT broker
     client.connect(broker_url, broker_port, keepalive=60)
     client.loop_start()
-    client.subscribe("switch")
-    client.publish("switch", json.dumps("Hello, MQTT!"))
     
     #SMARTSWITCH
     if (role == "smartswitch" or role == "switch"):
@@ -328,6 +326,9 @@ if __name__ == '__main__':
         smart_switch_Instance = f"{CSE_BASE}/smartswitch/state"
         create_container_instance(smart_switch_Instance, request_body_instance_smartswitch)
 
+        client.subscribe("switch")
+        client.publish("switch", json.dumps(request_body_instance_smartswitch["m2m:cin"]["con"]))
+
         #create subscription
         #request_body_subscription["m2m:sub"]["nu"] = ["http://" + "localhost" + ":1400/monitor"]
        #request_body_subscription["m2m:sub"]["rn"] = role
@@ -342,8 +343,7 @@ if __name__ == '__main__':
         for ip in ips:
             print(ip)
             try:
-                lightbulb_Container = CSE_BASE = "ws://" + ip + ":8000/cse-in/lightbulb"
-                print(lightbulb_Container)
+                lightbulb_Container = CSE_BASE = "http://" + ip + ":8000/cse-in/lightbulb"
                 ips_onem2m.append(requests.get(lightbulb_Container, headers=HEADERS_GET).json())
 
             except requests.exceptions.RequestException as e:

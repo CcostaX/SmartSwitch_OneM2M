@@ -1,5 +1,9 @@
 const mqtt = require('mqtt');
 
+// MQTT Broker IP address and Port
+const brokerIp = '192.168.1.91'; // Replace with your actual IP address
+const brokerPort = 1883;
+
 //const mqttBrokerUrl = 'mqtt://localhost:1883';
 const mqttBrokerUrl = 'http://192.168.1.91:1883';
 const mqttOptions = {
