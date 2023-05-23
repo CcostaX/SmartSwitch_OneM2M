@@ -6,6 +6,7 @@ import paho.mqtt.client as mqtt
 import threading
 import re
 import ast
+import random
 
 smartswitch_instance_value = 0
 lightbulb1_instance_value = 0
@@ -275,7 +276,7 @@ def on_connect(client, userdata, flags, rc):
 
 def on_message(client, userdata, msg):
     try:
-        payload = json.loads(msg.payload)
+        payload = msg.payloads
         print(f"Topic: {msg.topic} Message: {payload}")
     except json.JSONDecodeError:
         print(f"Topic: {msg.topic} Message: {msg.payload} is not a valid JSON")
@@ -349,10 +350,13 @@ if __name__ == '__main__':
             try:
                 #Verify if the lightbulb container exists and subscribe to the respective lightbulb
                 lightbulb_container = "http://" + ip + ":8000/cse-in/lightbulb"
-                if get_CSE_IN(lightbulb_container) is not None:                   
-                    ips_onem2m.append(ip)
-                    last_ip_number = ip.split('.')[-1]
-                    client.subscribe("lightbulb" + last_ip_number)
+                if get_CSE_IN(lightbulb_container) is not None:         
+                    #get the creation date of lightbulb
+                    get_lightbulb_ct = get_CSE_IN(lightbulb_container)['m2m:ae']['ct'].replace(",", "")
+                    #append to array of lightbulbs
+                    ips_onem2m.append(get_lightbulb_ct)
+                    #
+                    client.subscribe("lightbulb" + get_lightbulb_ct)
             except requests.exceptions.RequestException as e:
                 print("Error:", e)
         if (len(ips_onem2m) > 0):
@@ -371,11 +375,10 @@ if __name__ == '__main__':
 
                     # Extract the number of the current_state of the lightbubl
                     number = re.findall(r'\d+', current_state['controlledLight'])[0]
-                    #get the IP of the respective lightbulb
-                    #lightbulbIP = ips_onem2m[int(number)-1]
-
+                    #get the ct date of the respective lightbulb
+                    lightbulbCT = ips_onem2m[int(number)-1]
                     #send a message to the respective lightbulb to change his state
-                    client.publish("lightbulb" + str(number), "Change State")
+                    client.publish("lightbulb" + str(lightbulbCT), "Change State")
 
                     lightbulb_Instance = f"{CSE_BASE}/lightbulb/state"
 
@@ -401,28 +404,29 @@ if __name__ == '__main__':
                     print("Invalid input. Try again.")
         else:
             print("No lightbulbs available")
-    #LIGHTBULB
-    elif(role == "lightbulb" or role == "bulb"):
-        lightbulb_Container = f"{CSE_BASE}/lightbulb"
-        if get_CSE_IN(lightbulb_Container) is not None:
-            delete_application_entity(lightbulb_Container)
+
+    elif(role == "lightbulb" or role == "bulb"):     #LIGHTBULB
+        lightbulb_AE = f"{CSE_BASE}"
+        lightbulb_container = f"{CSE_BASE}/lightbulb"
+        lightbulb_Instance = f"{CSE_BASE}/lightbulb/state"
+
+        if get_CSE_IN(lightbulb_container) is not None:
+            delete_application_entity(lightbulb_container)
 
         #create application entity for smart switch and lightbulbs  
-        lightbulb_AE = f"{CSE_BASE}"
         request_body_AE_lightbulb["m2m:ae"]["poa"] = [CSE_BASE + "/lightbulb"]
         create_application_entity(lightbulb_AE, request_body_AE_lightbulb)
 
         #create a container for each AE
-        lightbulb_Container = f"{CSE_BASE}/lightbulb"
-        create_container(lightbulb_Container, request_body_container)
+        create_container(lightbulb_container, request_body_container)
 
         #create a container instance for each AE container
-        lightbulb_Instance = f"{CSE_BASE}/lightbulb/state"
         create_container_instance(lightbulb_Instance, request_body_instance_lightbulb)
 
         #extract the last number of the local ip and subscribe to the respective lightbulb
-        last_ip_number = localIP.split('.')[-1]
-        client.subscribe("lightbulb" + last_ip_number)
+        get_lightbulb_ct = get_CSE_IN(lightbulb_container)['m2m:ae']['ct'].replace(",", "")
+        print("lightbulb" + get_lightbulb_ct)
+        client.subscribe("lightbulb" + get_lightbulb_ct)
         client.loop_forever()
     # Clean up when done
     client.loop_stop()
