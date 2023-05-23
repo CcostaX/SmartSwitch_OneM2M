@@ -349,7 +349,7 @@ if __name__ == '__main__':
             try:
                 #Verify if the lightbulb container exists and subscribe to the respective lightbulb
                 lightbulb_container = "http://" + ip + ":8000/cse-in/lightbulb"
-                if get_CSE_IN(smart_switch_Container) is not None:                   
+                if get_CSE_IN(lightbulb_container) is not None:                   
                     ips_onem2m.append(ip)
                     last_ip_number = ip.split('.')[-1]
                     client.subscribe("lightbulb" + last_ip_number)
