@@ -4,6 +4,8 @@ import time
 import discoverIP
 import paho.mqtt.client as mqtt
 import threading
+import re
+import ast
 
 smartswitch_instance_value = 0
 lightbulb1_instance_value = 0
@@ -156,11 +158,11 @@ def get_CSE_IN(url):
         print(f"Error getting resource: {response.status_code}")
         return None
 
-def get_latest_instance(get_container_length, name):
+def get_latest_instance(url, get_container_length, name):
     latest_date = "20220424T154923,183229"
     latest_instance = ""
     for i in range(0, get_container_length):
-        state = f"{CSE_BASE}/{name}/state/{name}-instance_" + str(i)
+        state = f"{url}/{name}-instance_" + str(i)
         creationDate = get_CSE_IN(state)['m2m:cin']['ct']
         for i in range(len(creationDate)):
             if creationDate[i] > latest_date[i]:
@@ -273,7 +275,7 @@ def on_connect(client, userdata, flags, rc):
 
 def on_message(client, userdata, msg):
     try:
-        payload = json.loads(msg.payload)  # this line can throw an error if payload is not valid JSON
+        payload = json.loads(msg.payload)
         print(f"Topic: {msg.topic} Message: {payload}")
     except json.JSONDecodeError:
         print(f"Topic: {msg.topic} Message: {msg.payload} is not a valid JSON")
@@ -327,7 +329,7 @@ if __name__ == '__main__':
         create_container_instance(smart_switch_Instance, request_body_instance_smartswitch)
 
         client.subscribe("switch")
-        client.publish("switch", json.dumps(request_body_instance_smartswitch["m2m:cin"]["con"]))
+        #client.publish("switch", json.dumps(request_body_instance_smartswitch["m2m:cin"]["con"]))
 
         #create subscription
         #request_body_subscription["m2m:sub"]["nu"] = ["http://" + "localhost" + ":1400/monitor"]
@@ -340,55 +342,67 @@ if __name__ == '__main__':
         print(ips)
         ips_onem2m = []
         lightbulb_Container = f"{CSE_BASE}/lightbulb"
+        n_of_bulbs = 0
         for ip in ips:
+            n_of_bulbs += 1
             print(ip)
             try:
-                lightbulb_Container = CSE_BASE = "http://" + ip + ":8000/cse-in/lightbulb"
-                ips_onem2m.append(requests.get(lightbulb_Container, headers=HEADERS_GET).json())
-
+                #Verify if the lightbulb container exists and subscribe to the respective lightbulb
+                lightbulb_container = "http://" + ip + ":8000/cse-in/lightbulb"
+                if get_CSE_IN(smart_switch_Container) is not None:                   
+                    ips_onem2m.append(ip)
+                    last_ip_number = ip.split('.')[-1]
+                    client.subscribe("lightbulb" + last_ip_number)
             except requests.exceptions.RequestException as e:
                 print("Error:", e)
-
         if (ips_onem2m is not None):
             print(ips_onem2m)
-
-
-        while True:
-            print("Press '1' for ON/OFF, '2' for changing the controlled lightbulb, 'q' to quit")
-            button_press = input()
-            
-            smart_switch_Instance = f"{CSE_BASE}/smartswitch/state"   
-            get_container_length = int(repr(get_CSE_IN(smart_switch_Instance)['m2m:cnt']['cni']))
-            latest_instance = get_latest_instance(get_container_length, "smartswitch")
-
-            if button_press == '1':
-                current_state = json.loads(latest_instance['m2m:cin']['con'])
-
-                lightbulb_Instance = f"{CSE_BASE}/lightbulb/state"
-
-                if current_state['controlledLight'].startswith('lightbulb'):
-                    get_container_length = int(repr(get_CSE_IN(lightbulb_Instance)['m2m:cnt']['cni']))
-                    latest_instance = get_latest_instance(get_container_length, "lightbulb")
-                    lightbulb_instance_name_value = get_container_length
-                    request_body_instance_lightbulb["m2m:cin"]["con"] = json.dumps(change_value_lightbulb(latest_instance))
-                    request_body_instance_lightbulb["m2m:cin"]["rn"] = "lightbulb1-instance_" + str(lightbulb_instance_name_value)
-                    create_container_instance(lightbulb_Instance, request_body_instance_lightbulb)
-                else:
-                    print("Error changing lightbulb")
-            elif button_press == '2':
+            while True:
+                print("Press '1' for ON/OFF, '2' for changing the controlled lightbulb, 'q' to quit")
+                button_press = input()
+                
+                smart_switch_Instance = f"{CSE_BASE}/smartswitch/state"   
                 get_container_length = int(repr(get_CSE_IN(smart_switch_Instance)['m2m:cnt']['cni']))
-                latest_instance = get_latest_instance(get_container_length, "smartswitch")
-                smartswitch_instance_name_value = get_container_length
-                request_body_instance_smartswitch["m2m:cin"]["con"] = json.dumps(change_value_smartswitch(latest_instance))
-                request_body_instance_smartswitch["m2m:cin"]["rn"] = "smartswitch-instance_" + str(smartswitch_instance_name_value)
-                create_container_instance(smart_switch_Instance, request_body_instance_smartswitch)
-            elif button_press == 'q':
-                break
-            else:
-                print("Invalid input. Try again.")
-  
+                latest_instance = get_latest_instance(smart_switch_Instance, get_container_length, "smartswitch")
+            
+
+                if button_press == '1':
+                    current_state = json.loads(latest_instance['m2m:cin']['con'])
+
+                    # Extract the number of the current_state of the lightbubl
+                    number = re.findall(r'\d+', current_state['controlledLight'])[0]
+                    #get the IP of the respective lightbulb
+                    #lightbulbIP = ips_onem2m[int(number)-1]
+
+                    #send a message to the respective lightbulb to change his state
+                    client.publish("lightbulb" + str(number), "Change State")
+
+                    lightbulb_Instance = f"{CSE_BASE}/lightbulb/state"
+
+                    if current_state['controlledLight'].startswith('lightbulb'):
+                        get_container_length = int(repr(get_CSE_IN(lightbulb_Instance)['m2m:cnt']['cni']))
+                        latest_instance = get_latest_instance(get_container_length, "lightbulb")
+                        lightbulb_instance_name_value = get_container_length
+                        request_body_instance_lightbulb["m2m:cin"]["con"] = json.dumps(change_value_lightbulb(latest_instance))
+                        request_body_instance_lightbulb["m2m:cin"]["rn"] = "lightbulb1-instance_" + str(lightbulb_instance_name_value)
+                        create_container_instance(lightbulb_Instance, request_body_instance_lightbulb)
+                    else:
+                        print("Error changing lightbulb")
+                elif button_press == '2':
+                    get_container_length = int(repr(get_CSE_IN(smart_switch_Instance)['m2m:cnt']['cni']))
+                    latest_instance = get_latest_instance(get_container_length, "smartswitch")
+                    smartswitch_instance_name_value = get_container_length
+                    request_body_instance_smartswitch["m2m:cin"]["con"] = json.dumps(change_value_smartswitch(latest_instance))
+                    request_body_instance_smartswitch["m2m:cin"]["rn"] = "smartswitch-instance_" + str(smartswitch_instance_name_value)
+                    create_container_instance(smart_switch_Instance, request_body_instance_smartswitch)
+                elif button_press == 'q':
+                    break
+                else:
+                    print("Invalid input. Try again.")
+        else:
+            print("No lightbulbs available")
     #LIGHTBULB
-    elif(role == "lightbulb"):
+    elif(role == "lightbulb" or role == "bulb"):
         lightbulb_Container = f"{CSE_BASE}/lightbulb"
         if get_CSE_IN(lightbulb_Container) is not None:
             delete_application_entity(lightbulb_Container)
@@ -405,6 +419,10 @@ if __name__ == '__main__':
         #create a container instance for each AE container
         lightbulb_Instance = f"{CSE_BASE}/lightbulb/state"
         create_container_instance(lightbulb_Instance, request_body_instance_lightbulb)
+
+        #extract the last number of the local ip and subscribe to the respective lightbulb
+        last_ip_number = localIP.split('.')[-1]
+        client.subscribe("lightbulb" + last_ip_number)
 
 
 
