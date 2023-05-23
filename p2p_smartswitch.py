@@ -276,8 +276,19 @@ def on_connect(client, userdata, flags, rc):
 
 def on_message(client, userdata, msg):
     try:
-        payload = msg.payloads
+        payload = json.loads(msg.payload)
         print(f"Topic: {msg.topic} Message: {payload}")
+
+        if ("Change lightbulb state" in payload):
+            get_container_length = int(repr(get_CSE_IN(lightbulb_Instance)['m2m:cnt']['cni']))
+            latest_instance = get_latest_instance(get_container_length, "lightbulb")
+            lightbulb_instance_name_value = get_container_length
+            request_body_instance_lightbulb["m2m:cin"]["con"] = json.dumps(change_value_lightbulb(latest_instance))
+            request_body_instance_lightbulb["m2m:cin"]["rn"] = "lightbulb-instance_" + str(lightbulb_instance_name_value)
+            create_container_instance(lightbulb_Instance, request_body_instance_lightbulb)
+            client.publish("lightbulb" + str(lightbulbCT), request_body_instance_lightbulb["m2m:cin"]["con"])
+        else:
+            print("Change lightbulb")
     except json.JSONDecodeError:
         print(f"Topic: {msg.topic} Message: {msg.payload} is not a valid JSON")
 
@@ -378,19 +389,9 @@ if __name__ == '__main__':
                     #get the ct date of the respective lightbulb
                     lightbulbCT = ips_onem2m[int(number)-1]
                     #send a message to the respective lightbulb to change his state
-                    client.publish("lightbulb" + str(lightbulbCT), "Change State")
+                    client.publish("lightbulb" + str(lightbulbCT), "Change lightbulb state")
 
                     lightbulb_Instance = f"{CSE_BASE}/lightbulb/state"
-
-                    if current_state['controlledLight'].startswith('lightbulb'):
-                        get_container_length = int(repr(get_CSE_IN(lightbulb_Instance)['m2m:cnt']['cni']))
-                        latest_instance = get_latest_instance(get_container_length, "lightbulb")
-                        lightbulb_instance_name_value = get_container_length
-                        request_body_instance_lightbulb["m2m:cin"]["con"] = json.dumps(change_value_lightbulb(latest_instance))
-                        request_body_instance_lightbulb["m2m:cin"]["rn"] = "lightbulb1-instance_" + str(lightbulb_instance_name_value)
-                        create_container_instance(lightbulb_Instance, request_body_instance_lightbulb)
-                    else:
-                        print("Error changing lightbulb")
                 elif button_press == '2':
                     get_container_length = int(repr(get_CSE_IN(smart_switch_Instance)['m2m:cnt']['cni']))
                     latest_instance = get_latest_instance(get_container_length, "smartswitch")
