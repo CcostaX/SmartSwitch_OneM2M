@@ -306,10 +306,10 @@ if __name__ == '__main__':
 
     # Connect to the MQTT broker
     client.connect(broker_url, broker_port, keepalive=60)
-    client.loop_start()
     
     #SMARTSWITCH
     if (role == "smartswitch" or role == "switch"):
+        client.loop_start()
         #get the smart switch and lightbulbs AE if already existed
         smart_switch_Container = f"{CSE_BASE}/smartswitch"
         if get_CSE_IN(smart_switch_Container) is not None:
@@ -355,7 +355,7 @@ if __name__ == '__main__':
                     client.subscribe("lightbulb" + last_ip_number)
             except requests.exceptions.RequestException as e:
                 print("Error:", e)
-        if (ips_onem2m is not None):
+        if (len(ips_onem2m) > 0):
             print(ips_onem2m)
             while True:
                 print("Press '1' for ON/OFF, '2' for changing the controlled lightbulb, 'q' to quit")
@@ -423,6 +423,9 @@ if __name__ == '__main__':
         #extract the last number of the local ip and subscribe to the respective lightbulb
         last_ip_number = localIP.split('.')[-1]
         client.subscribe("lightbulb" + last_ip_number)
-
+        client.loop_forever()
+    # Clean up when done
+    client.loop_stop()
+    client.disconnect()
 
 
