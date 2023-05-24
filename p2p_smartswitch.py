@@ -276,12 +276,12 @@ def on_connect(client, userdata, flags, rc):
 
 def on_message(client, userdata, msg):
     try:
-        payload = json.loads(msg.payload)
+        payload = msg.payload.decode("utf-8")
         print(f"Topic: {msg.topic} Message: {payload}")
 
         if ("Change lightbulb state" in payload):
             get_container_length = int(repr(get_CSE_IN(lightbulb_Instance)['m2m:cnt']['cni']))
-            latest_instance = get_latest_instance(get_container_length, "lightbulb")
+            latest_instance = get_latest_instance(lightbulb_Instance, get_container_length, "lightbulb")
             lightbulb_instance_name_value = get_container_length
             request_body_instance_lightbulb["m2m:cin"]["con"] = json.dumps(change_value_lightbulb(latest_instance))
             request_body_instance_lightbulb["m2m:cin"]["rn"] = "lightbulb-instance_" + str(lightbulb_instance_name_value)
@@ -293,7 +293,7 @@ def on_message(client, userdata, msg):
         print(f"Topic: {msg.topic} Message: {msg.payload} is not a valid JSON")
 
 
-#-------------------------------------------------------------------------#
+#---------------------------------------------------------------------------------------------------------------#
 
 
 
@@ -425,9 +425,9 @@ if __name__ == '__main__':
         create_container_instance(lightbulb_Instance, request_body_instance_lightbulb)
 
         #extract the last number of the local ip and subscribe to the respective lightbulb
-        get_lightbulb_ct = get_CSE_IN(lightbulb_container)['m2m:ae']['ct'].replace(",", "")
-        print("lightbulb" + get_lightbulb_ct)
-        client.subscribe("lightbulb" + get_lightbulb_ct)
+        lightbulbCT = get_CSE_IN(lightbulb_container)['m2m:ae']['ct'].replace(",", "")
+        print("lightbulb" + lightbulbCT)
+        client.subscribe("lightbulb" + lightbulbCT)
         client.loop_forever()
     # Clean up when done
     client.loop_stop()
