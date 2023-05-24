@@ -279,7 +279,8 @@ def on_message(client, userdata, msg):
         payload = msg.payload.decode("utf-8")
         print(f"Topic: {msg.topic} Message: {payload}")
 
-        if ("Change lightbulb state" in payload):
+        if ("Change lightbulb state" in payload and (role == "lightbulb" or role == "bulb")):
+            print(lightbulb_Instance)
             get_container_length = int(repr(get_CSE_IN(lightbulb_Instance)['m2m:cnt']['cni']))
             latest_instance = get_latest_instance(lightbulb_Instance, get_container_length, "lightbulb")
             lightbulb_instance_name_value = get_container_length
