@@ -12,6 +12,8 @@ smartswitch_instance_value = 0
 lightbulb1_instance_value = 0
 lightbulb2_instance_value = 0
 
+switch_bulb_state = 0
+
 #get current time
 current_time = time.localtime()
 date_str = time.strftime("%Y-%m-%d %H:%M:%S", current_time)
@@ -171,19 +173,11 @@ def get_latest_instance(url, get_container_length, name):
                 latest_instance = get_CSE_IN(state)
     return latest_instance
 
-def change_value_smartswitch(latest_instance):
+def change_value_smartswitch(latest_instance, smartswitch_instance_name_value):
     if latest_instance:
         current_state = json.loads(latest_instance['m2m:cin']['con'])
-
-        if current_state['controlledLight'] == 'lightbulb1':
-            current_state['controlledLight'] = 'lightbulb2'
-        elif current_state['controlledLight'] == 'lightbulb2':
-            current_state['controlledLight'] = 'lightbulb1'
-        else:
-            print("Invalid controlledLight value")
-
+        current_state['controlledLight'] = "lightbulb" + str(smartswitch_instance_name_value)
         return current_state
-
     else:
         print("No latest instance found")
 
@@ -272,15 +266,12 @@ client = mqtt.Client()
 def on_connect(client, userdata, flags, rc):
     print('Connected to MQTT broker')
   
-
-
 def on_message(client, userdata, msg):
     try:
         payload = msg.payload.decode("utf-8")
         print(f"Topic: {msg.topic} Message: {payload}")
 
         if ("Change lightbulb state" in payload and (role == "lightbulb" or role == "bulb")):
-            print(lightbulb_Instance)
             get_container_length = int(repr(get_CSE_IN(lightbulb_Instance)['m2m:cnt']['cni']))
             latest_instance = get_latest_instance(lightbulb_Instance, get_container_length, "lightbulb")
             lightbulb_instance_name_value = get_container_length
@@ -352,7 +343,6 @@ if __name__ == '__main__':
         
 
         ips = discoverIP.discoverIPS()
-        print(ips)
         ips_onem2m = []
         lightbulb_Container = f"{CSE_BASE}/lightbulb"
         n_of_bulbs = 0
@@ -372,7 +362,6 @@ if __name__ == '__main__':
             except requests.exceptions.RequestException as e:
                 print("Error:", e)
         if (len(ips_onem2m) > 0):
-            print(ips_onem2m)
             while True:
                 print("Press '1' for ON/OFF, '2' for changing the controlled lightbulb, 'q' to quit")
                 button_press = input()
@@ -391,15 +380,28 @@ if __name__ == '__main__':
                     lightbulbCT = ips_onem2m[int(number)-1]
                     #send a message to the respective lightbulb to change his state
                     client.publish("lightbulb" + str(lightbulbCT), "Change lightbulb state")
-
-                    lightbulb_Instance = f"{CSE_BASE}/lightbulb/state"
                 elif button_press == '2':
                     get_container_length = int(repr(get_CSE_IN(smart_switch_Instance)['m2m:cnt']['cni']))
-                    latest_instance = get_latest_instance(get_container_length, "smartswitch")
+                    latest_instance = get_latest_instance(smart_switch_Instance, get_container_length, "smartswitch")
                     smartswitch_instance_name_value = get_container_length
-                    request_body_instance_smartswitch["m2m:cin"]["con"] = json.dumps(change_value_smartswitch(latest_instance))
-                    request_body_instance_smartswitch["m2m:cin"]["rn"] = "smartswitch-instance_" + str(smartswitch_instance_name_value)
-                    create_container_instance(smart_switch_Instance, request_body_instance_smartswitch)
+                    #verify if exists more than 1 lightbulb
+                    if (get_container_length > 0):
+                        
+                        if (get_container_length > smartswitch_instance_name_value):
+                            #move to the next lightbulb
+                            request_body_instance_smartswitch["m2m:cin"]["con"] = json.dumps(change_value_smartswitch(latest_instance, smartswitch_instance_name_value+1))
+                            request_body_instance_smartswitch["m2m:cin"]["rn"] = "smartswitch-instance_" + str(get_container_length)
+                            create_container_instance(smart_switch_Instance, request_body_instance_smartswitch)
+                            switch_bulb_state = 1
+                        elif (get_container_length == smartswitch_instance_name_value):
+                            #go back to lightbulb1 (first lightbulb)
+                            request_body_instance_smartswitch["m2m:cin"]["con"] = json.dumps(change_value_smartswitch(latest_instance, 1))
+                            request_body_instance_smartswitch["m2m:cin"]["rn"] = "smartswitch-instance_" + str(get_container_length)
+                            create_container_instance(smart_switch_Instance, request_body_instance_smartswitch)
+                            switch_bulb_state = 2
+                        
+                    else:
+                        print("Only 1 lightbulb is available")
                 elif button_press == 'q':
                     break
                 else:
