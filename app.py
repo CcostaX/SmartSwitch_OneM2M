@@ -3,8 +3,12 @@ import p2p_smartswitch
 
 app = Flask(__name__)
 
+i = 0
+
 switch_bulb_state = "off"
 lightbulbs_state = ["off", "off", "off"]
+
+
 
 
 @app.route('/')
@@ -16,7 +20,12 @@ def index():
 def get_values():
     global switch_bulb_state
     global lightbulbs_state
-
+    '''
+    if switch_bulb_state == "on":
+        switch_bulb_state = "off"
+    else:
+        switch_bulb_state = "on"
+        '''
     switch_bulb_state = p2p_smartswitch.switch_bulb_state
     lightbulbs_state = ["on", "on", "on"]
 

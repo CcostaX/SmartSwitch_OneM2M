@@ -369,7 +369,10 @@ if __name__ == '__main__':
                 smart_switch_Instance = f"{CSE_BASE}/smartswitch/state"   
                 get_container_length = int(repr(get_CSE_IN(smart_switch_Instance)['m2m:cnt']['cni']))
                 latest_instance = get_latest_instance(smart_switch_Instance, get_container_length, "smartswitch")
-            
+
+                print("--------------------")
+                print(switch_bulb_state)
+                print("--------------------")
 
                 if button_press == '1':
                     current_state = json.loads(latest_instance['m2m:cin']['con'])
