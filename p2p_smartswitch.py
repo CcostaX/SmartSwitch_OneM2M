@@ -276,10 +276,11 @@ def on_message(client, userdata, msg):
             request_body_instance_lightbulb["m2m:cin"]["rn"] = "lightbulb-instance_" + str(lightbulb_instance_name_value)
             create_container_instance(lightbulb_Instance, request_body_instance_lightbulb)
             client.publish("lightbulb" + str(lightbulbCT), request_body_instance_lightbulb["m2m:cin"]["con"])
-        else:
+        elif ((role == "smartswitch" or role == "switch")):
             print("Change lightbulb")
 
-            switch_bulb_state = json.loads(request_body_instance_lightbulb["m2m:cin"]["con"])["state"]
+            switch_bulb_state = payload
+            print(switch_bulb_state)
             requests.post('http://127.0.0.1:8082/update_state', data={'state': switch_bulb_state})    
     except json.JSONDecodeError:
         print(f"Topic: {msg.topic} Message: {msg.payload} is not a valid JSON")
