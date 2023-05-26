@@ -3,16 +3,14 @@ import json
 import time
 import discoverIP
 import paho.mqtt.client as mqtt
-import threading
 import re
-import ast
-import random
+from flask import Flask, render_template, jsonify, request
+from multiprocessing import Process
 
-smartswitch_instance_value = 0
-lightbulb1_instance_value = 0
-lightbulb2_instance_value = 0
+app = Flask(__name__)
 
-switch_bulb_state = 0
+switch_current_bulb = "none"
+switch_bulb_state = False
 
 #get current time
 current_time = time.localtime()
@@ -100,7 +98,7 @@ request_body_instance_smartswitch = {
      "m2m:cin": {
         "cnf": "text/plain:0",
         "con": "{\"controlledLight\": \"lightbulb1\"}",
-        "rn": "smartswitch-instance_" + str(smartswitch_instance_value) + ""
+        "rn": "smartswitch-instance_0"
     }
 }
 
@@ -108,7 +106,7 @@ request_body_instance_lightbulb = {
     "m2m:cin": {
         "cnf": "text/plain:0",
         "con": "{\"state\": \"off\"}",
-        "rn": "lightbulb-instance_" + str(lightbulb1_instance_value) + ""
+        "rn": "lightbulb-instance_0"
     }
 }
 
@@ -257,7 +255,6 @@ def create_subscription(url, data):
 
 
 
-
 #MQTT
 #-------------------------------------------------------------------------#
 # Define MQTT client
@@ -281,15 +278,15 @@ def on_message(client, userdata, msg):
             client.publish("lightbulb" + str(lightbulbCT), request_body_instance_lightbulb["m2m:cin"]["con"])
         else:
             print("Change lightbulb")
+
+            switch_bulb_state = json.loads(request_body_instance_lightbulb["m2m:cin"]["con"])["state"]
+            requests.post('http://127.0.0.1:8082/update_state', data={'state': switch_bulb_state})    
     except json.JSONDecodeError:
         print(f"Topic: {msg.topic} Message: {msg.payload} is not a valid JSON")
 
 
+
 #---------------------------------------------------------------------------------------------------------------#
-
-
-
-
 
 #  MAIN LOOP
 if __name__ == '__main__':
@@ -311,6 +308,22 @@ if __name__ == '__main__':
     # Connect to the MQTT broker
     client.connect(broker_url, broker_port, keepalive=60)
     
+    #Connect to HTML page
+    page_state = False
+    try:
+        response = requests.get('http://127.0.0.1:8082')
+        if response.status_code == 200:
+            page_state = True
+            print('Smart switch Page is open')
+
+            #update HTML page with current values
+            switch_current_bulb = "lightbulb1"
+            requests.post('http://127.0.0.1:8082/update_state', data={'current': switch_current_bulb})      
+        else:
+            print('Failed to update state')
+    except requests.exceptions.ConnectionError:
+        print('Connection to the server failed. Unable to determine page state.')
+    
     #SMARTSWITCH
     if (role == "smartswitch" or role == "switch"):
         client.loop_start()
@@ -331,6 +344,8 @@ if __name__ == '__main__':
         #create a container instance
         smart_switch_Instance = f"{CSE_BASE}/smartswitch/state"
         create_container_instance(smart_switch_Instance, request_body_instance_smartswitch)
+
+        
 
         client.subscribe("switch")
         #client.publish("switch", json.dumps(request_body_instance_smartswitch["m2m:cin"]["con"]))
@@ -370,10 +385,6 @@ if __name__ == '__main__':
                 get_container_length = int(repr(get_CSE_IN(smart_switch_Instance)['m2m:cnt']['cni']))
                 latest_instance = get_latest_instance(smart_switch_Instance, get_container_length, "smartswitch")
 
-                print("--------------------")
-                print(switch_bulb_state)
-                print("--------------------")
-
                 if button_press == '1':
                     current_state = json.loads(latest_instance['m2m:cin']['con'])
 
@@ -387,22 +398,23 @@ if __name__ == '__main__':
                     get_container_length = int(repr(get_CSE_IN(smart_switch_Instance)['m2m:cnt']['cni']))
                     latest_instance = get_latest_instance(smart_switch_Instance, get_container_length, "smartswitch")
                     smartswitch_instance_name_value = get_container_length
+
                     #verify if exists more than 1 lightbulb
-                    if (get_container_length > 0):
-                        
+                    if (get_container_length > 0):              
                         if (get_container_length > smartswitch_instance_name_value):
                             #move to the next lightbulb
-                            request_body_instance_smartswitch["m2m:cin"]["con"] = json.dumps(change_value_smartswitch(latest_instance, smartswitch_instance_name_value+1))
-                            request_body_instance_smartswitch["m2m:cin"]["rn"] = "smartswitch-instance_" + str(get_container_length)
-                            create_container_instance(smart_switch_Instance, request_body_instance_smartswitch)
-                            switch_bulb_state = 1
+                            request_body_instance_smartswitch["m2m:cin"]["con"] = json.dumps(change_value_smartswitch(latest_instance, smartswitch_instance_name_value+1))          
                         elif (get_container_length == smartswitch_instance_name_value):
                             #go back to lightbulb1 (first lightbulb)
                             request_body_instance_smartswitch["m2m:cin"]["con"] = json.dumps(change_value_smartswitch(latest_instance, 1))
-                            request_body_instance_smartswitch["m2m:cin"]["rn"] = "smartswitch-instance_" + str(get_container_length)
-                            create_container_instance(smart_switch_Instance, request_body_instance_smartswitch)
-                            switch_bulb_state = 2
-                        
+
+                        #create container instance
+                        request_body_instance_smartswitch["m2m:cin"]["rn"] = "smartswitch-instance_" + str(get_container_length)
+                        create_container_instance(smart_switch_Instance, request_body_instance_smartswitch)
+
+                        #update HTML page with current values
+                        switch_current_bulb = json.loads(request_body_instance_smartswitch["m2m:cin"]["con"])["controlledLight"]
+                        requests.post('http://127.0.0.1:8082/update_state', data={'current': switch_current_bulb})                      
                     else:
                         print("Only 1 lightbulb is available")
                 elif button_press == 'q':

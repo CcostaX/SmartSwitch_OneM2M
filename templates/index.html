@@ -2,7 +2,6 @@
 <html>
 <head>
     <title>Smart Switch OneM2M</title>
-    <link rel="stylesheet" href="styles.css">
     <script>
         // JavaScript code to update the values every second
         setInterval(function() {
@@ -13,8 +12,8 @@
                     valuesElement.innerHTML = '';
 
                     var switchBulbElement = document.createElement('h3');
-                    switchBulbElement.innerText = 'Switch Bulb: ' + data.switch_bulb_state;
-                    switchBulbElement.style.color = 'red';
+                    switchBulbElement.innerText = 'Current Lightbulb: ' + data.switch_current_bulb;
+                    switchBulbElement.style.color = 'blue';
                     valuesElement.appendChild(switchBulbElement);   
 
                     var lightbulbs = data.lightbulbs_state;
@@ -94,10 +93,6 @@
   order: 2;
 }
 
-.bulb-state{
-    color: red;
-}
-
 h1 {text-align: center;}
 p {text-align: center;}
 div {text-align: center;}
@@ -114,7 +109,7 @@ div {text-align: center;}
         </div>
     </div>
     <div id="values">
-        <h3 class="bulb-state">Switch Bulb: {{ switch_bulb_state }}</h3>
+        <h3> Current Lightbulb: {{ switch_bulb_state }}</h3>
         {% for i in range(lightbulbs|length) %}
             <p>Lightbulb{{ i + 1 }}: {{ lightbulbs[i] }}</p>
         {% endfor %}
