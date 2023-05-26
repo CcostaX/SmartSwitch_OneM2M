@@ -275,7 +275,9 @@ def on_message(client, userdata, msg):
             request_body_instance_lightbulb["m2m:cin"]["con"] = json.dumps(change_value_lightbulb(latest_instance))
             request_body_instance_lightbulb["m2m:cin"]["rn"] = "lightbulb-instance_" + str(lightbulb_instance_name_value)
             create_container_instance(lightbulb_Instance, request_body_instance_lightbulb)
-            client.publish("lightbulb" + str(lightbulbCT), request_body_instance_lightbulb["m2m:cin"]["con"])
+
+            bulb_state = json.loads(request_body_instance_smartswitch["m2m:cin"]["con"])["state"]
+            client.publish("lightbulb" + str(lightbulbCT), bulb_state)
         elif ((role == "smartswitch" or role == "switch")):
             print("Change lightbulb")
 
