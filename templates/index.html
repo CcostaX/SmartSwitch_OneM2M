@@ -48,6 +48,14 @@
   
       function toggleOnOff() {
           var leftBtn = document.querySelector('.btn.left');
+
+          var userInput = 1
+          
+          // Send the user input to the server (Python script) using AJAX
+          var xhr = new XMLHttpRequest();
+          xhr.open("POST", "/handle_input", true);
+          xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+          xhr.send("input=" + encodeURIComponent(userInput));
       }
   
       function changeBulb() {

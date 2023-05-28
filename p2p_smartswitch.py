@@ -6,6 +6,8 @@ import paho.mqtt.client as mqtt
 import re
 from flask import Flask, render_template, jsonify, request
 from multiprocessing import Process
+import subprocess
+from flask import Flask, request
 
 app = Flask(__name__)
 
@@ -15,6 +17,9 @@ switch_bulb_state = False
 #get current time
 current_time = time.localtime()
 date_str = time.strftime("%Y-%m-%d %H:%M:%S", current_time)
+
+button_press = False
+
 
 #-------------------------------------------------------------------------#
 # Constants
@@ -252,7 +257,21 @@ def create_subscription(url, data):
         print(response.text)
         return None
 #-------------------------------------------------------------------------#
+#Keyboard input
 
+def handle_key_press(event):
+    global button_press
+    key = event.name
+    if key == '1':
+        # Perform action for pressing '1'
+        print("Button 1 pressed")
+    elif key == '2':
+        # Perform action for pressing '2'
+        print("Button 2 pressed")
+    elif key == 'q':
+        # Perform action for pressing 'q'
+        print("Quit button pressed")
+        button_press = True  # Set the variable to True to exit the loop
 
 
 #MQTT
@@ -276,14 +295,14 @@ def on_message(client, userdata, msg):
             request_body_instance_lightbulb["m2m:cin"]["rn"] = "lightbulb-instance_" + str(lightbulb_instance_name_value)
             create_container_instance(lightbulb_Instance, request_body_instance_lightbulb)
 
-            bulb_state = json.loads(request_body_instance_smartswitch["m2m:cin"]["con"])["state"]
+            bulb_state = json.loads(request_body_instance_lightbulb["m2m:cin"]["con"])["state"]
             client.publish("lightbulb" + str(lightbulbCT), bulb_state)
         elif ((role == "smartswitch" or role == "switch")):
             print("Change lightbulb")
 
             switch_bulb_state = payload
-            print(switch_bulb_state)
-            requests.post('http://127.0.0.1:8082/update_state', data={'state': switch_bulb_state})    
+            if (page_state is True):
+                requests.post('http://127.0.0.1:8082/update_state', data={'state': switch_bulb_state})    
     except json.JSONDecodeError:
         print(f"Topic: {msg.topic} Message: {msg.payload} is not a valid JSON")
 
@@ -375,15 +394,36 @@ if __name__ == '__main__':
                     get_lightbulb_ct = get_CSE_IN(lightbulb_container)['m2m:ae']['ct'].replace(",", "")
                     #append to array of lightbulbs
                     ips_onem2m.append(get_lightbulb_ct)
-                    #
+                    
+                    #subscribe the new lightbulb with creation data
                     client.subscribe("lightbulb" + get_lightbulb_ct)
+
+                    #update html website (initialize lightbulbs)
+                    if (page_state is True):
+                        #get latest instance and state of the current lightbulb
+                        lightbulb_Instance = "http://" + ip + ":8000/cse-in/lightbulb/state"
+                        get_container_length = int(repr(get_CSE_IN(lightbulb_Instance)['m2m:cnt']['cni']))
+                        latest_instance = get_latest_instance(lightbulb_Instance, get_container_length, "lightbulb")      
+                        switch_bulb_state = json.loads(latest_instance['m2m:cin']['con'])["state"]  
+
+                        #send to update HTML page                     
+                        requests.post('http://127.0.0.1:8082/initialize_bulbs', data={'state': switch_bulb_state})   
             except requests.exceptions.RequestException as e:
                 print("Error:", e)
         if (len(ips_onem2m) > 0):
             while True:
-                print("Press '1' for ON/OFF, '2' for changing the controlled lightbulb, 'q' to quit")
-                button_press = input()
-                
+                if (page_state is False):
+                    print("Press '1' for ON/OFF, '2' for changing the controlled lightbulb, 'q' to quit")
+                    button_press = input()
+                else:
+                    print("Waiting for HTML input")
+                    user_input = requests.get('http://127.0.0.1:8082/get_input').content.decode('utf-8')
+                    while user_input != '1' and user_input != '1':
+                        user_input = requests.get('http://127.0.0.1:8082/get_input').content.decode('utf-8')
+                        print(user_input)
+                        time.sleep(1)
+                    button_press = user_input
+     
                 smart_switch_Instance = f"{CSE_BASE}/smartswitch/state"   
                 get_container_length = int(repr(get_CSE_IN(smart_switch_Instance)['m2m:cnt']['cni']))
                 latest_instance = get_latest_instance(smart_switch_Instance, get_container_length, "smartswitch")
@@ -416,16 +456,22 @@ if __name__ == '__main__':
                         create_container_instance(smart_switch_Instance, request_body_instance_smartswitch)
 
                         #update HTML page with current values
-                        switch_current_bulb = json.loads(request_body_instance_smartswitch["m2m:cin"]["con"])["controlledLight"]
-                        requests.post('http://127.0.0.1:8082/update_state', data={'current': switch_current_bulb})                      
+                        if (page_state is True):
+                            switch_current_bulb = json.loads(request_body_instance_smartswitch["m2m:cin"]["con"])["controlledLight"]
+                            requests.post('http://127.0.0.1:8082/update_state', data={'current': switch_current_bulb})                      
                     else:
                         print("Only 1 lightbulb is available")
                 elif button_press == 'q':
                     break
                 else:
                     print("Invalid input. Try again.")
+                
+                if (page_state is True):
+                    requests.post('http://127.0.0.1:8082/update_input', data={'user_input': 0})    
         else:
             print("No lightbulbs available")
+
+
 
     elif(role == "lightbulb" or role == "bulb"):     #LIGHTBULB
         lightbulb_AE = f"{CSE_BASE}"
