@@ -321,6 +321,7 @@ if __name__ == '__main__':
 
     # MQTT Broker URL and Port
     broker_url = localIP
+    print("Finding broker...")
     print(discoverIP.discover_ips_on_mosquitto(localIP))
     broker_port = 1883 
 
@@ -384,6 +385,7 @@ if __name__ == '__main__':
         ips_onem2m = []
         lightbulb_Container = f"{CSE_BASE}/lightbulb"
         n_of_bulbs = 0
+        print("Finding IPs with port 8000 and contain lightbulbs...")
         for ip in ips:
             n_of_bulbs += 1
             print(ip)
