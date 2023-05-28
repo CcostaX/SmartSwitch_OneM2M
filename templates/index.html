@@ -3,45 +3,87 @@
 <head>
     <title>Smart Switch OneM2M</title>
     <script>
-        // JavaScript code to update the values every second
-        setInterval(function() {
-            fetch('/values')
-                .then(response => response.json())
-                .then(data => {
-                    var valuesElement = document.getElementById('values');
-                    valuesElement.innerHTML = '';
+      // JavaScript code to update the values every second
+      setInterval(function() {
+          fetch('/values')
+              .then(response => response.json())
+              .then(data => {
+                  var valuesElement = document.getElementById('current');
+                  valuesElement.innerHTML = '';
+  
+                  var switchBulbElement = document.createElement('h3');
+                  switchBulbElement.innerText = 'Current Lightbulb: ' + data.switch_current_bulb;
+                  switchBulbElement.style.color = 'blue';
+                  valuesElement.appendChild(switchBulbElement);   
 
-                    var switchBulbElement = document.createElement('h3');
-                    switchBulbElement.innerText = 'Current Lightbulb: ' + data.switch_current_bulb;
-                    switchBulbElement.style.color = 'blue';
-                    valuesElement.appendChild(switchBulbElement);   
-
-                    var lightbulbs = data.lightbulbs_state;
-                    for (var i = 0; i < lightbulbs.length; i++) {
-                        var valueElement = document.createElement('h3');
-                        valueElement.innerText = `Lightbulb${i + 1}: ${lightbulbs[i]}`;
-                        valuesElement.appendChild(valueElement);
-                    }
-                });
-        }, 1000); // Update every 1 second
-
-        function toggleSwitch() {
-            var leftBtn = document.querySelector('.btn.left');
-            var rightBtn = document.querySelector('.btn.right');
-
-            if (leftBtn.style.transform === 'translateX(0px)') {
-                leftBtn.style.transform = 'translateX(50px)';
-                rightBtn.style.transform = 'translateX(0px)';
-            } else {
-                leftBtn.style.transform = 'translateX(0px)';
-                rightBtn.style.transform = 'translateX(50px)';
-            }
-        }
-    </script>
+                  var valuesElement = document.getElementById('values');
+                  valuesElement.innerHTML = '';
+  
+                  var lightbulbs = data.lightbulbs_state;
+                  for (var i = 0; i < lightbulbs.length; i++) {
+                      var gridItem = document.createElement('div');
+                      gridItem.className = 'grid-item';
+  
+                      var imageElement = document.createElement('img');
+                      if (lightbulbs[i] == "off"){
+                        imageElement.src = "{{ url_for('static', filename='images/lightbulb_off.png') }}";
+                      }
+                      else if (lightbulbs[i] == "on"){
+                        imageElement.src = "{{ url_for('static', filename='images/lightbulb_on.png') }}";
+                      }
+                      imageElement.alt = `Lightbulb${i + 1}`;
+                      imageElement.width = 150;
+                      imageElement.height = 150;
+                      imageElement.className = 'lightbulb-img';
+  
+                      var valueElement = document.createElement('h3');
+                      valueElement.innerText = `Lightbulb${i + 1}`;
+  
+                      gridItem.appendChild(imageElement);
+                      gridItem.appendChild(valueElement);
+                      valuesElement.appendChild(gridItem);
+                  }
+              });
+      }, 1000); // Update every 1 second
+  
+      function toggleOnOff() {
+          var leftBtn = document.querySelector('.btn.left');
+      }
+  
+      function changeBulb() {
+          var rightBtn = document.querySelector('.btn.right');
+  
+          if (leftBtn.style.transform === 'translateX(0px)') {
+              leftBtn.style.transform = 'translateX(50px)';
+              rightBtn.style.transform = 'translateX(0px)';
+          } else {
+              leftBtn.style.transform = 'translateX(0px)';
+              rightBtn.style.transform = 'translateX(50px)';
+          }
+      }
+  </script>
 </head>
 
 
 <style>
+
+#values {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-gap: 10px;
+}
+
+.grid-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.lightbulb-img {
+  margin-bottom: 10px;
+}
+
 .switch-container {
   display: flex;
   justify-content: center;
@@ -50,7 +92,7 @@
 }
 
 .switch {
-  width: 500px;
+  width: 200px;
   height: 200px;
   background-color: gray;
   display: flex;
@@ -102,17 +144,15 @@ div {text-align: center;}
 <body>
     <h1>Smart Switch OneM2M</h1>
     <div class="switch-container">
-        <div class="switch" onclick="toggleSwitch()">
+        <div class="switch" onclick="toggleOnOff()">
             <div class="btn left">On/Off</div>
-            
-            <div class="btn right">Change</div>
         </div>
+        <div class="switch" onclick="changeBulb()">
+          <div class="btn right">Change</div>
+      </div>
     </div>
-    <div id="values">
-        <h3> Current Lightbulb: {{ switch_bulb_state }}</h3>
-        {% for i in range(lightbulbs|length) %}
-            <p>Lightbulb{{ i + 1 }}: {{ lightbulbs[i] }}</p>
-        {% endfor %}
-    </div>
+
+    <div id="current"> </div>
+    <div id="values"> </div>
 </body>
 </html>
