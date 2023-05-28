@@ -321,6 +321,7 @@ if __name__ == '__main__':
 
     # MQTT Broker URL and Port
     broker_url = localIP
+    print(discoverIP.discover_ips_on_mosquitto(localIP))
     broker_port = 1883 
 
     # Set the callback functions
@@ -420,7 +421,6 @@ if __name__ == '__main__':
                     user_input = requests.get('http://127.0.0.1:8082/get_input').content.decode('utf-8')
                     while user_input != '1' and user_input != '1':
                         user_input = requests.get('http://127.0.0.1:8082/get_input').content.decode('utf-8')
-                        print(user_input)
                         time.sleep(1)
                     button_press = user_input
      

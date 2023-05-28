@@ -12,14 +12,24 @@ def discover_ips_on_network(local_ip):
     target_ip = f"{network_prefix}.0/24"
     
     nm = nmap.PortScanner()
-    #nm.scan(hosts=target_ip, arguments='-n -sP -PE -PA21,23,80,3389')
-    #ips = [host for host in nm.all_hosts() if host != local_ip]
-
     nm.scan(hosts=target_ip, arguments='-n -sS -p 8000')
     ips = [host for host in nm.all_hosts() if nm[host].has_tcp(8000) and nm[host]['tcp'][8000]['state'] == 'open' and host != local_ip]
 
 
     return ips
+
+def discover_ips_on_mosquitto(local_ip): 
+    network_prefix = '.'.join(local_ip.split('.')[:-1])
+    target_ip = f"{network_prefix}.0/24"
+    
+    nm = nmap.PortScanner()
+    nm.scan(hosts=target_ip, arguments='-n -sS -p 1883')
+    ips = [host for host in nm.all_hosts() if nm[host].has_tcp(1883) and nm[host]['tcp'][1883]['state'] == 'open']
+
+    if ips:
+        return ips[0]
+    else:
+        return None
 
 def discoverIPS():
     local_ip = get_local_ip() 
