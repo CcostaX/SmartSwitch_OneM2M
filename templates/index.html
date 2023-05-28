@@ -61,13 +61,13 @@
       function changeBulb() {
           var rightBtn = document.querySelector('.btn.right');
   
-          if (leftBtn.style.transform === 'translateX(0px)') {
-              leftBtn.style.transform = 'translateX(50px)';
-              rightBtn.style.transform = 'translateX(0px)';
-          } else {
-              leftBtn.style.transform = 'translateX(0px)';
-              rightBtn.style.transform = 'translateX(50px)';
-          }
+          var userInput = 2
+          
+          // Send the user input to the server (Python script) using AJAX
+          var xhr = new XMLHttpRequest();
+          xhr.open("POST", "/handle_input", true);
+          xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+          xhr.send("input=" + encodeURIComponent(userInput));
       }
   </script>
 </head>

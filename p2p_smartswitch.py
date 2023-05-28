@@ -420,8 +420,9 @@ if __name__ == '__main__':
                 else:
                     print("Waiting for HTML input")
                     user_input = requests.get('http://127.0.0.1:8082/get_input').content.decode('utf-8')
-                    while user_input != '1' and user_input != '1':
+                    while user_input != '1' and user_input != '2':
                         user_input = requests.get('http://127.0.0.1:8082/get_input').content.decode('utf-8')
+                        print(user_input)
                         time.sleep(1)
                     button_press = user_input
      
@@ -443,6 +444,7 @@ if __name__ == '__main__':
                     latest_instance = get_latest_instance(smart_switch_Instance, get_container_length, "smartswitch")
                     smartswitch_instance_name_value = get_container_length
 
+                    print("olaaaa")
                     #verify if exists more than 1 lightbulb
                     if (get_container_length > 0):              
                         if (get_container_length > smartswitch_instance_name_value):
