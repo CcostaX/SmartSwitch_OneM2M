@@ -84,8 +84,7 @@ request_body_AE_lightbulb = {
         "api": "N.lightbulb",
         "poa": ["http://192.168.1.3:8000/cse-in/lightbulb"],
         "rn": "lightbulb",
-        "srv": ["3"],
-        "rr": False
+        "rr": True
     }
 }
 
@@ -397,7 +396,7 @@ if __name__ == '__main__':
                     ips_onem2m.append(get_lightbulb_ct)
                     
                     #subscribe the new lightbulb with creation data
-                    client.subscribe("lightbulb" + get_lightbulb_ct)
+                    #client.subscribe("lightbulb" + get_lightbulb_ct)
 
                     #update html website (initialize lightbulbs)
                     if (page_state is True):
@@ -482,6 +481,7 @@ if __name__ == '__main__':
         if get_CSE_IN(lightbulb_container) is not None:
             delete_application_entity(lightbulb_container)
 
+        print(lightbulb_AE)
         #create application entity for smart switch and lightbulbs  
         request_body_AE_lightbulb["m2m:ae"]["poa"] = [CSE_BASE + "/lightbulb"]
         create_application_entity(lightbulb_AE, request_body_AE_lightbulb)
@@ -495,8 +495,8 @@ if __name__ == '__main__':
         #extract the last number of the local ip and subscribe to the respective lightbulb
         lightbulbCT = get_CSE_IN(lightbulb_container)['m2m:ae']['ct'].replace(",", "")
         print("lightbulb" + lightbulbCT)
-        client.subscribe("lightbulb" + lightbulbCT)
-        client.loop_forever()
+        #client.subscribe("lightbulb" + lightbulbCT)
+        #client.loop_forever()
     # Clean up when done
     client.loop_stop()
     client.disconnect()
