@@ -367,18 +367,12 @@ if __name__ == '__main__':
         smart_switch_Instance = f"{CSE_BASE}/smartswitch/state"
         create_container_instance(smart_switch_Instance, request_body_instance_smartswitch)
         
-
-        #client.subscribe("switch")
-        #client.publish("switch", json.dumps(request_body_instance_smartswitch["m2m:cin"]["con"]))
-
-        #create subscription
-        request_body_subscription["m2m:sub"]["nu"] = ["http://" + localIP + ":1400/switch"]
+        #create subscription for switch
+        request_body_subscription["m2m:sub"]["nu"] = ["http://" + localIP + ":8000/switch"]
         request_body_subscription["m2m:sub"]["rn"] = role
-        create_subscription(smart_switch_Instance, request_body_subscription)
-        
+        create_subscription(smart_switch_Instance, request_body_subscription)      
 
         ips = discoverIP.discoverIPS()
-        print("olaaa")
         ips_onem2m = []
         lightbulb_Container = f"{CSE_BASE}/lightbulb"
         n_of_bulbs = 0
@@ -388,16 +382,18 @@ if __name__ == '__main__':
             print(ip)
             try:
                 #Verify if the lightbulb container exists and subscribe to the respective lightbulb
-                lightbulb_container = "http://" + ip + ":8000/cse-in/lightbulb"
+                lightbulb_container = "http://" + ip + ":8000/onem2m/lightbulb"
                 if get_CSE_IN(lightbulb_container) is not None:         
                     #get the creation date of lightbulb
                     get_lightbulb_ct = get_CSE_IN(lightbulb_container)['m2m:ae']['ct'].replace(",", "")
                     #append to array of lightbulbs
                     ips_onem2m.append(get_lightbulb_ct)
-                    
-                    #subscribe the new lightbulb with creation data
-                    #client.subscribe("lightbulb" + get_lightbulb_ct)
 
+                    #create subscription
+                    request_body_subscription["m2m:sub"]["nu"] = ["http://" + ip + ":8000/lightbulb" + get_lightbulb_ct]
+                    request_body_subscription["m2m:sub"]["rn"] = "lightbulb" + get_lightbulb_ct
+                    create_subscription(smart_switch_Instance, request_body_subscription)
+                                
                     #update html website (initialize lightbulbs)
                     if (page_state is True):
                         #get latest instance and state of the current lightbulb
@@ -495,6 +491,10 @@ if __name__ == '__main__':
         #extract the last number of the local ip and subscribe to the respective lightbulb
         lightbulbCT = get_CSE_IN(lightbulb_container)['m2m:ae']['ct'].replace(",", "")
         print("lightbulb" + lightbulbCT)
+
+        request_body_subscription["m2m:sub"]["nu"] = ["http://" + localIP + ":8000/lightbulb" + lightbulbCT]
+        request_body_subscription["m2m:sub"]["rn"] = "lightbulb" + lightbulbCT
+        create_subscription(lightbulb_Instance, request_body_subscription)
         #client.subscribe("lightbulb" + lightbulbCT)
         #client.loop_forever()
     # Clean up when done
