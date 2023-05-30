@@ -46,9 +46,6 @@ def initialize_bulbs():
     if(request.form.get('state') is not None and request.form.get('state') != "Change lightbulb state"):
         switch_bulb_state = request.form.get('state')
 
-    #if(request.form.get('number_bulb') is not None):
-        #lightbulbs_number = request.form.get('number_bulb')
-
     print(switch_bulb_state)
     lightbulbs_state.append(switch_bulb_state)
 

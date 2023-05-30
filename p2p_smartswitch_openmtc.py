@@ -23,7 +23,7 @@ button_press = False
 
 #-------------------------------------------------------------------------#
 # Constants
-CSE_BASE = 'http://localhost:8000/cse-in'
+CSE_BASE = 'http://localhost:8000/onem2m'
 ORIGINATOR = 'CAdmin'
 
 #define the request header
@@ -74,10 +74,8 @@ HEADERS_Subscription = {
 request_body_AE_smartswitch = {
     "m2m:ae": {
         "api": "N.smartswitch",
-        "poa": ["http://172.22.196.204:8000/cse-in/smartswitch"],
         "rn": "smartswitch",
-        "srv": ["3"],
-        "rr": False
+        "rr": True
     }
 }
 
@@ -202,7 +200,8 @@ def change_value_lightbulb(latest_instance):
 
 # Application Entity (POST, DELETE)
 def create_application_entity(url, data):
-    response = requests.post(url, headers=HEADERS_AE, data=json.dumps(data))
+    headers = {"Content-Type": "application/vnd.onem2m-res+json"}
+    response = requests.post(url, headers=headers, data=json.dumps(data))
     if response.status_code == 201:  # 201 Created
         print("Created successfully")
         return json.loads(response.text)
@@ -314,23 +313,23 @@ def on_message(client, userdata, msg):
 if __name__ == '__main__':
     localIP = discoverIP.get_local_ip()
     print(localIP)
-    CSE_BASE = "http://" + localIP + ":8000/cse-in"
+    CSE_BASE = "http://" + localIP + ":8000/onem2m"
     #CSE_BASE = "http://" + "10.79.11.253" + ":8000/onem2m?fu=1"
 
     #Get role
     role = discoverIP.attributeRole()
 
     # MQTT Broker URL and Port
-    print("Finding broker...")
-    broker_url = discoverIP.discover_ips_on_mosquitto(localIP)
-    broker_port = 1883 
+    #print("Finding broker...")
+    #broker_url = discoverIP.discover_ips_on_mosquitto(localIP)
+    #broker_port = 1883 
 
     # Set the callback functions
-    client.on_connect = on_connect
-    client.on_message = on_message
+    #client.on_connect = on_connect
+    #client.on_message = on_message
 
     # Connect to the MQTT broker
-    client.connect(broker_url, broker_port, keepalive=60)
+    #client.connect(broker_url, broker_port, keepalive=60)
     
     #Connect to HTML page
     page_state = False
@@ -368,20 +367,19 @@ if __name__ == '__main__':
         #create a container instance
         smart_switch_Instance = f"{CSE_BASE}/smartswitch/state"
         create_container_instance(smart_switch_Instance, request_body_instance_smartswitch)
-
         
 
-        client.subscribe("switch")
+        #client.subscribe("switch")
         #client.publish("switch", json.dumps(request_body_instance_smartswitch["m2m:cin"]["con"]))
 
         #create subscription
-        #request_body_subscription["m2m:sub"]["nu"] = ["http://" + "localhost" + ":1400/monitor"]
-       #request_body_subscription["m2m:sub"]["rn"] = role
-       # print(request_body_subscription)
-        #create_subscription(smart_switch_Instance, request_body_subscription)
+        request_body_subscription["m2m:sub"]["nu"] = ["http://" + localIP + ":1400/switch"]
+        request_body_subscription["m2m:sub"]["rn"] = role
+        create_subscription(smart_switch_Instance, request_body_subscription)
         
 
         ips = discoverIP.discoverIPS()
+        print("olaaa")
         ips_onem2m = []
         lightbulb_Container = f"{CSE_BASE}/lightbulb"
         n_of_bulbs = 0
