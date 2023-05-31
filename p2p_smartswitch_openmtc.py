@@ -8,6 +8,10 @@ from flask import Flask, render_template, jsonify, request
 from multiprocessing import Process
 import subprocess
 from flask import Flask, request
+import websockets
+import asyncio
+import threading
+
 
 app = Flask(__name__)
 
@@ -254,31 +258,11 @@ def create_subscription(url, data):
         print(f"Error creating resource: {response.status_code}")
         print(response.text)
         return None
-#-------------------------------------------------------------------------#
-#Keyboard input
-
-def handle_key_press(event):
-    global button_press
-    key = event.name
-    if key == '1':
-        # Perform action for pressing '1'
-        print("Button 1 pressed")
-    elif key == '2':
-        # Perform action for pressing '2'
-        print("Button 2 pressed")
-    elif key == 'q':
-        # Perform action for pressing 'q'
-        print("Quit button pressed")
-        button_press = True  # Set the variable to True to exit the loop
-
 
 #MQTT
 #-------------------------------------------------------------------------#
-# Define MQTT client
-client = mqtt.Client()
+# Define Websockets client
 
-def on_connect(client, userdata, flags, rc):
-    print('Connected to MQTT broker')
   
 def on_message(client, userdata, msg):
     try:
@@ -291,7 +275,7 @@ def on_message(client, userdata, msg):
             lightbulb_instance_name_value = get_container_length
             request_body_instance_lightbulb["m2m:cin"]["con"] = json.dumps(change_value_lightbulb(latest_instance))
             request_body_instance_lightbulb["m2m:cin"]["rn"] = "lightbulb-instance_" + str(lightbulb_instance_name_value)
-            create_container_instance(lightbulb_Instance, request_body_instance_lightbulb)
+            create_container_instance(lightbulb_Instance, "request_body_instance_lightbulb")
 
             bulb_state = json.loads(request_body_instance_lightbulb["m2m:cin"]["con"])["state"]
             client.publish("lightbulb" + str(lightbulbCT), bulb_state)
@@ -304,7 +288,11 @@ def on_message(client, userdata, msg):
     except json.JSONDecodeError:
         print(f"Topic: {msg.topic} Message: {msg.payload} is not a valid JSON")
 
-
+async def receive_message(websocket, path):
+    async for message in websocket:
+        message_data = json.loads(message)
+        # Process the received message as needed
+        print("Received message:", message_data)
 
 #---------------------------------------------------------------------------------------------------------------#
 
@@ -318,37 +306,28 @@ if __name__ == '__main__':
     #Get role
     role = discoverIP.attributeRole()
 
-    # MQTT Broker URL and Port
-    #print("Finding broker...")
-    #broker_url = discoverIP.discover_ips_on_mosquitto(localIP)
-    #broker_port = 1883 
-
-    # Set the callback functions
-    #client.on_connect = on_connect
-    #client.on_message = on_message
-
-    # Connect to the MQTT broker
-    #client.connect(broker_url, broker_port, keepalive=60)
-    
     #Connect to HTML page
     page_state = False
+    page_http = "http://" + discoverIP.discover_ips_on_flask(localIP) + ":8082"
     try:
-        response = requests.get('http://127.0.0.1:8082')
+        response = requests.get(page_http)
         if response.status_code == 200:
             page_state = True
             print('Smart switch Page is open')
 
             #update HTML page with current values
             switch_current_bulb = "lightbulb1"
-            requests.post('http://127.0.0.1:8082/update_state', data={'current': switch_current_bulb})      
+            requests.post(page_http + "/update_state", data={'current': switch_current_bulb})      
         else:
-            print('Failed to update state')
+            print('Failed to update state')     
+            raise SystemExit  
     except requests.exceptions.ConnectionError:
         print('Connection to the server failed. Unable to determine page state.')
+        raise SystemExit
     
+    page_http_onem2m = page_http + "/onem2m"
     #SMARTSWITCH
     if (role == "smartswitch" or role == "switch"):
-        client.loop_start()
         #get the smart switch and lightbulbs AE if already existed
         smart_switch_Container = f"{CSE_BASE}/smartswitch"
         if get_CSE_IN(smart_switch_Container) is not None:
@@ -368,13 +347,13 @@ if __name__ == '__main__':
         create_container_instance(smart_switch_Instance, request_body_instance_smartswitch)
         
         #create subscription for switch
-        request_body_subscription["m2m:sub"]["nu"] = ["http://" + localIP + ":8000/switch"]
+        request_body_subscription["m2m:sub"]["nu"] = [page_http_onem2m + "/smartswitch"]
         request_body_subscription["m2m:sub"]["rn"] = role
         create_subscription(smart_switch_Instance, request_body_subscription)      
 
         ips = discoverIP.discoverIPS()
         ips_onem2m = []
-        lightbulb_Container = f"{CSE_BASE}/lightbulb"
+        lightbulb_switch_Container = f"{CSE_BASE}/lightbulb"
         n_of_bulbs = 0
         print("Finding IPs with port 8000 and contains lightbulbs...")
         for ip in ips:
@@ -390,20 +369,21 @@ if __name__ == '__main__':
                     ips_onem2m.append(get_lightbulb_ct)
 
                     #create subscription
-                    request_body_subscription["m2m:sub"]["nu"] = ["http://" + ip + ":8000/lightbulb" + get_lightbulb_ct]
+                    request_body_subscription["m2m:sub"]["nu"] = [page_http + "/lightbulb"]
                     request_body_subscription["m2m:sub"]["rn"] = "lightbulb" + get_lightbulb_ct
-                    create_subscription(smart_switch_Instance, request_body_subscription)
+                    ola = create_subscription(smart_switch_Instance, request_body_subscription)
+                    print(request_body_subscription)
                                 
                     #update html website (initialize lightbulbs)
                     if (page_state is True):
                         #get latest instance and state of the current lightbulb
-                        lightbulb_Instance = "http://" + ip + ":8000/cse-in/lightbulb/state"
+                        lightbulb_Instance = "http://" + ip + ":8000/onem2m/lightbulb/state"
                         get_container_length = int(repr(get_CSE_IN(lightbulb_Instance)['m2m:cnt']['cni']))
                         latest_instance = get_latest_instance(lightbulb_Instance, get_container_length, "lightbulb")      
                         switch_bulb_state = json.loads(latest_instance['m2m:cin']['con'])["state"]  
 
                         #send to update HTML page                     
-                        requests.post('http://127.0.0.1:8082/initialize_bulbs', data={'state': switch_bulb_state})   
+                        requests.post(page_http + '/initialize_bulbs', data={'state': switch_bulb_state})   
             except requests.exceptions.RequestException as e:
                 print("Error:", e)
         if (len(ips_onem2m) > 0):
@@ -413,9 +393,9 @@ if __name__ == '__main__':
                     button_press = input()
                 else:
                     print("Waiting for HTML input")
-                    user_input = requests.get('http://127.0.0.1:8082/get_input').content.decode('utf-8')
+                    user_input = requests.get(page_http + '/get_input').content.decode('utf-8')
                     while user_input != '1' and user_input != '2':
-                        user_input = requests.get('http://127.0.0.1:8082/get_input').content.decode('utf-8')
+                        user_input = requests.get(page_http + '/get_input').content.decode('utf-8')
                         print(user_input)
                         time.sleep(1)
                     button_press = user_input
@@ -427,12 +407,18 @@ if __name__ == '__main__':
                 if button_press == '1':
                     current_state = json.loads(latest_instance['m2m:cin']['con'])
 
-                    # Extract the number of the current_state of the lightbubl
+                    # Extract the number of the current_state of the lightbulb
                     number = re.findall(r'\d+', current_state['controlledLight'])[0]
-                    #get the ct date of the respective lightbulb
+                    #get the creation date (ct) of the respective lightbulb
                     lightbulbCT = ips_onem2m[int(number)-1]
+
+
+
+
                     #send a message to the respective lightbulb to change his state
-                    client.publish("lightbulb" + str(lightbulbCT), "Change lightbulb state")
+                    print(page_http + '/lightbulb' + lightbulbCT)
+                    requests.post(page_http + '/lightbulb/' + lightbulbCT, data={'message': "GELADOOOOOOOOOOO"})
+
                 elif button_press == '2':
                     get_container_length = int(repr(get_CSE_IN(smart_switch_Instance)['m2m:cnt']['cni']))
                     latest_instance = get_latest_instance(smart_switch_Instance, get_container_length, "smartswitch")
@@ -454,7 +440,7 @@ if __name__ == '__main__':
                         #update HTML page with current values
                         if (page_state is True):
                             switch_current_bulb = json.loads(request_body_instance_smartswitch["m2m:cin"]["con"])["controlledLight"]
-                            requests.post('http://127.0.0.1:8082/update_state', data={'current': switch_current_bulb})                      
+                            requests.post(page_http + '/update_state', data={'current': switch_current_bulb})                      
                     else:
                         print("Only 1 lightbulb is available")
                 elif button_press == 'q':
@@ -463,7 +449,7 @@ if __name__ == '__main__':
                     print("Invalid input. Try again.")
                 
                 if (page_state is True):
-                    requests.post('http://127.0.0.1:8082/update_input', data={'user_input': 0})    
+                    requests.post(page_http + '/update_input', data={'user_input': 0})    
         else:
             print("No lightbulbs available")
 
@@ -498,7 +484,6 @@ if __name__ == '__main__':
         #client.subscribe("lightbulb" + lightbulbCT)
         #client.loop_forever()
     # Clean up when done
-    client.loop_stop()
-    client.disconnect()
+
 
 

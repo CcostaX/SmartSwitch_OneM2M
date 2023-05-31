@@ -30,6 +30,19 @@ def discover_ips_on_mosquitto(local_ip):
         return ips[0]
     else:
         return None
+    
+def discover_ips_on_flask(local_ip): 
+    network_prefix = '.'.join(local_ip.split('.')[:-1])
+    target_ip = f"{network_prefix}.0/24"
+    
+    nm = nmap.PortScanner()
+    nm.scan(hosts=target_ip, arguments='-n -sS -p 8082')
+    ips = [host for host in nm.all_hosts() if nm[host].has_tcp(8082) and nm[host]['tcp'][8082]['state'] == 'open']
+
+    if ips:
+        return ips[0]
+    else:
+        return None
 
 def discoverIPS():
     local_ip = get_local_ip() 

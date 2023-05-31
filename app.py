@@ -4,6 +4,7 @@ import re
 import subprocess
 import os
 import requests
+import discoverIP
 
 app = Flask(__name__)
 
@@ -84,8 +85,16 @@ def update_input():
     global user_input
 
     user_input = "0"
-    print("ewfgewfgewgfewg")
     return ""
 
+@app.route('/lightbulb/<lightbulbCT>', methods=['POST'])
+def receive_message(lightbulbCT):
+    #message = request.json
+    message = request.form.get('message')
+    # Process the received message as needed
+    print(message)
+    return "Message received successfully!"
+
 if __name__ == '__main__':
-    app.run(port=8082)
+    localIP = discoverIP.get_local_ip()
+    app.run(host=localIP, port=8082)
