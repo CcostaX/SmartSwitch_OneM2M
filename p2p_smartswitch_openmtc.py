@@ -261,8 +261,11 @@ def create_subscription(url, data):
 
 #MQTT
 #-------------------------------------------------------------------------#
-# Define Websockets client
+# Define MQTT client
+client = mqtt.Client()
 
+def on_connect(client, userdata, flags, rc):
+    print('Connected to MQTT broker')
   
 def on_message(client, userdata, msg):
     try:
@@ -301,31 +304,45 @@ if __name__ == '__main__':
     localIP = discoverIP.get_local_ip()
     print(localIP)
     CSE_BASE = "http://" + localIP + ":8000/onem2m"
-    #CSE_BASE = "http://" + "10.79.11.253" + ":8000/onem2m?fu=1"
 
     #Get role
     role = discoverIP.attributeRole()
 
+    # MQTT Broker URL and Port
+    print("Finding broker...")
+    broker_url = discoverIP.discover_ips_on_mosquitto(localIP)
+    broker_port = 1883 
+
+    mqtt_url = "mqtt://" + str(broker_url) + ":" + str(broker_port)
+    print(mqtt_url)
+
+    # Set the callback functions
+    client.on_connect = on_connect
+    client.on_message = on_message
+
+    # Connect to the MQTT broker
+    client.connect(broker_url, broker_port, keepalive=60)
+
     #Connect to HTML page
     page_state = False
-    page_http = "http://" + discoverIP.discover_ips_on_flask(localIP) + ":8082"
     try:
-        response = requests.get(page_http)
-        if response.status_code == 200:
-            page_state = True
-            print('Smart switch Page is open')
+        flaskIP = discoverIP.discover_ips_on_flask(localIP)
+        if (flaskIP is not None):
+            page_http = "http://" + discoverIP.discover_ips_on_flask(localIP) + ":8082"
+            response = requests.get(page_http)
+            if response.status_code == 200:
+                page_state = True
+                print('Smart switch Page is open')
 
-            #update HTML page with current values
-            switch_current_bulb = "lightbulb1"
-            requests.post(page_http + "/update_state", data={'current': switch_current_bulb})      
-        else:
-            print('Failed to update state')     
-            raise SystemExit  
+                #update HTML page with current values
+                switch_current_bulb = "lightbulb1"
+                requests.post(page_http + "/update_state", data={'current': switch_current_bulb})      
+            else:
+                print('Failed to update state')     
     except requests.exceptions.ConnectionError:
         print('Connection to the server failed. Unable to determine page state.')
-        raise SystemExit
+        #raise SystemExit
     
-    page_http_onem2m = page_http + "/onem2m"
     #SMARTSWITCH
     if (role == "smartswitch" or role == "switch"):
         #get the smart switch and lightbulbs AE if already existed
@@ -347,9 +364,10 @@ if __name__ == '__main__':
         create_container_instance(smart_switch_Instance, request_body_instance_smartswitch)
         
         #create subscription for switch
-        request_body_subscription["m2m:sub"]["nu"] = [page_http_onem2m + "/smartswitch"]
+        request_body_subscription["m2m:sub"]["nu"] = [mqtt_url]
         request_body_subscription["m2m:sub"]["rn"] = role
-        create_subscription(smart_switch_Instance, request_body_subscription)      
+        ola = create_subscription(smart_switch_Instance, request_body_subscription)      
+        print(ola)
 
         ips = discoverIP.discoverIPS()
         ips_onem2m = []
@@ -366,13 +384,13 @@ if __name__ == '__main__':
                     #get the creation date of lightbulb
                     get_lightbulb_ct = get_CSE_IN(lightbulb_container)['m2m:ae']['ct'].replace(",", "")
                     #append to array of lightbulbs
-                    ips_onem2m.append(get_lightbulb_ct)
-
+                    #ips_onem2m.append(get_lightbulb_ct)
+                    ips_onem2m.append(ip)
                     #create subscription
-                    request_body_subscription["m2m:sub"]["nu"] = [page_http + "/lightbulb"]
-                    request_body_subscription["m2m:sub"]["rn"] = "lightbulb" + get_lightbulb_ct
-                    ola = create_subscription(smart_switch_Instance, request_body_subscription)
-                    print(request_body_subscription)
+                    #request_body_subscription["m2m:sub"]["nu"] = [mqtt_url]
+                    #request_body_subscription["m2m:sub"]["rn"] = "lightbulb" + get_lightbulb_ct
+                    #ola = create_subscription(smart_switch_Instance, request_body_subscription)
+                    #print(request_body_subscription)
                                 
                     #update html website (initialize lightbulbs)
                     if (page_state is True):
@@ -410,14 +428,26 @@ if __name__ == '__main__':
                     # Extract the number of the current_state of the lightbulb
                     number = re.findall(r'\d+', current_state['controlledLight'])[0]
                     #get the creation date (ct) of the respective lightbulb
-                    lightbulbCT = ips_onem2m[int(number)-1]
+                    lightbulbIP = ips_onem2m[int(number)-1]
 
+                    lightbulb_Instance = "http://" + lightbulbIP + ":8000/onem2m/lightbulb/state"
+                    print("----------------------")
+                    print(lightbulb_Instance)
+                    print("----------------------")
+                    get_container_length = int(repr(get_CSE_IN(lightbulb_Instance)['m2m:cnt']['cni']))
+                    latest_instance = get_latest_instance(lightbulb_Instance, get_container_length, "lightbulb")
+                    lightbulb_instance_name_value = get_container_length
+                    request_body_instance_lightbulb["m2m:cin"]["con"] = json.dumps(change_value_lightbulb(latest_instance))
+                    print(json.dumps(change_value_lightbulb(latest_instance))['state'])
+                    request_body_instance_lightbulb["m2m:cin"]["rn"] = "lightbulb-instance_" + str(lightbulb_instance_name_value)
+                    create_container_instance(lightbulb_Instance, "request_body_instance_lightbulb")
 
-
+                    if (page_state is True):
+                        requests.post('http://127.0.0.1:8082/update_state', data={'state': switch_bulb_state})  
 
                     #send a message to the respective lightbulb to change his state
-                    print(page_http + '/lightbulb' + lightbulbCT)
-                    requests.post(page_http + '/lightbulb/' + lightbulbCT, data={'message': "GELADOOOOOOOOOOO"})
+                    #print(page_http + '/lightbulb' + lightbulbCT)
+                    #requests.post(page_http + '/lightbulb/' + lightbulbCT, data={'message': "GELADOOOOOOOOOOO"})
 
                 elif button_press == '2':
                     get_container_length = int(repr(get_CSE_IN(smart_switch_Instance)['m2m:cnt']['cni']))
