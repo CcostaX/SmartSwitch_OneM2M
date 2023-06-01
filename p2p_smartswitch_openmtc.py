@@ -366,8 +366,7 @@ if __name__ == '__main__':
         #create subscription for switch
         request_body_subscription["m2m:sub"]["nu"] = [mqtt_url]
         request_body_subscription["m2m:sub"]["rn"] = role
-        ola = create_subscription(smart_switch_Instance, request_body_subscription)      
-        print(ola)
+        create_subscription(smart_switch_Instance, request_body_subscription)
 
         ips = discoverIP.discoverIPS()
         ips_onem2m = []
@@ -386,11 +385,18 @@ if __name__ == '__main__':
                     #append to array of lightbulbs
                     #ips_onem2m.append(get_lightbulb_ct)
                     ips_onem2m.append(ip)
+
+
+
+
+
                     #create subscription
-                    #request_body_subscription["m2m:sub"]["nu"] = [mqtt_url]
-                    #request_body_subscription["m2m:sub"]["rn"] = "lightbulb" + get_lightbulb_ct
-                    #ola = create_subscription(smart_switch_Instance, request_body_subscription)
-                    #print(request_body_subscription)
+                    request_body_subscription["m2m:sub"]["nu"] = [mqtt_url]
+                    request_body_subscription["m2m:sub"]["rn"] = "lightbulb" + get_lightbulb_ct
+                    create_subscription(smart_switch_Instance, request_body_subscription)
+
+
+                    client.subscribe("lightbulb" + get_lightbulb_ct)
                                 
                     #update html website (initialize lightbulbs)
                     if (page_state is True):
@@ -437,10 +443,11 @@ if __name__ == '__main__':
                     get_container_length = int(repr(get_CSE_IN(lightbulb_Instance)['m2m:cnt']['cni']))
                     latest_instance = get_latest_instance(lightbulb_Instance, get_container_length, "lightbulb")
                     lightbulb_instance_name_value = get_container_length
-                    request_body_instance_lightbulb["m2m:cin"]["con"] = json.dumps(change_value_lightbulb(latest_instance))
-                    print(json.dumps(change_value_lightbulb(latest_instance))['state'])
+
+                    request_body_instance_lightbulb["m2m:cin"]["con"] = json.dumps(change_value_lightbulb(latest_instance))                 
                     request_body_instance_lightbulb["m2m:cin"]["rn"] = "lightbulb-instance_" + str(lightbulb_instance_name_value)
-                    create_container_instance(lightbulb_Instance, "request_body_instance_lightbulb")
+                    #current_state = change_value_lightbulb(latest_instance)
+                    create_container_instance(lightbulb_Instance, request_body_instance_lightbulb)
 
                     if (page_state is True):
                         requests.post('http://127.0.0.1:8082/update_state', data={'state': switch_bulb_state})  
