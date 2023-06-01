@@ -508,7 +508,7 @@ if __name__ == '__main__':
         lightbulbCT = get_CSE_IN(lightbulb_container)['m2m:ae']['ct'].replace(",", "")
         print("lightbulb" + lightbulbCT)
 
-        request_body_subscription["m2m:sub"]["nu"] = ["http://" + localIP + ":8000/lightbulb" + lightbulbCT]
+        request_body_subscription["m2m:sub"]["nu"] = [mqtt_url]
         request_body_subscription["m2m:sub"]["rn"] = "lightbulb" + lightbulbCT
         create_subscription(lightbulb_Instance, request_body_subscription)
         #client.subscribe("lightbulb" + lightbulbCT)
