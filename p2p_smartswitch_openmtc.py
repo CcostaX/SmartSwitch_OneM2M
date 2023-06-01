@@ -387,16 +387,15 @@ if __name__ == '__main__':
                     ips_onem2m.append(ip)
 
 
-
-
-
                     #create subscription
                     request_body_subscription["m2m:sub"]["nu"] = [mqtt_url]
-                    request_body_subscription["m2m:sub"]["rn"] = "lightbulb" + get_lightbulb_ct
-                    create_subscription(smart_switch_Instance, request_body_subscription)
+                    #request_body_subscription["m2m:sub"]["rn"] = "lightbulb" + get_lightbulb_ct
+                    request_body_subscription["m2m:sub"]["rn"] = "//" + ip + ":8000/onem2m/lightbulb"
+                    ola = create_subscription(smart_switch_Instance, request_body_subscription)
+                    print(ola)
 
-
-                    client.subscribe("lightbulb" + get_lightbulb_ct)
+                    notification_topic = f"onem2m/lightbulb/state/lightbulb" + get_lightbulb_ct
+                    client.subscribe(notification_topic)
                                 
                     #update html website (initialize lightbulbs)
                     if (page_state is True):
@@ -437,9 +436,6 @@ if __name__ == '__main__':
                     lightbulbIP = ips_onem2m[int(number)-1]
 
                     lightbulb_Instance = "http://" + lightbulbIP + ":8000/onem2m/lightbulb/state"
-                    print("----------------------")
-                    print(lightbulb_Instance)
-                    print("----------------------")
                     get_container_length = int(repr(get_CSE_IN(lightbulb_Instance)['m2m:cnt']['cni']))
                     latest_instance = get_latest_instance(lightbulb_Instance, get_container_length, "lightbulb")
                     lightbulb_instance_name_value = get_container_length
@@ -515,9 +511,9 @@ if __name__ == '__main__':
         lightbulbCT = get_CSE_IN(lightbulb_container)['m2m:ae']['ct'].replace(",", "")
         print("lightbulb" + lightbulbCT)
 
-        request_body_subscription["m2m:sub"]["nu"] = [mqtt_url]
-        request_body_subscription["m2m:sub"]["rn"] = "lightbulb" + lightbulbCT
-        create_subscription(lightbulb_Instance, request_body_subscription)
+        #request_body_subscription["m2m:sub"]["nu"] = [mqtt_url]
+        #request_body_subscription["m2m:sub"]["rn"] = "lightbulb" + lightbulbCT
+        #ola = create_subscription(lightbulb_Instance, request_body_subscription)
         #client.subscribe("lightbulb" + lightbulbCT)
         #client.loop_forever()
     # Clean up when done
