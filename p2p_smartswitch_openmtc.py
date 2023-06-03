@@ -118,14 +118,6 @@ request_body_instance_lightbulb = {
 
 request_body_subscription = {
     "m2m:sub": {
-        "enc": {
-            "net": [
-                1,
-                2,
-                3,
-                4
-            ]
-        },
         "nu": [
             "http://192.168.1.3:8000/bulb"
         ],
@@ -389,13 +381,14 @@ if __name__ == '__main__':
 
                     #create subscription
                     request_body_subscription["m2m:sub"]["nu"] = [mqtt_url]
-                    #request_body_subscription["m2m:sub"]["rn"] = "lightbulb" + get_lightbulb_ct
-                    request_body_subscription["m2m:sub"]["rn"] = "//" + ip + ":8000/onem2m/lightbulb"
-                    ola = create_subscription(smart_switch_Instance, request_body_subscription)
+                    request_body_subscription["m2m:sub"]["rn"] = "lightbulb" + get_lightbulb_ct
+                    #request_body_subscription["m2m:sub"]["rn"] = "//" + ip + ":8000/onem2m/lightbulb"
+                    lightbulb_Instance = "http://" + ip + ":8000/onem2m/lightbulb/state"
+                    ola = create_subscription(lightbulb_Instance, request_body_subscription)
                     print(ola)
 
-                    notification_topic = f"onem2m/lightbulb/state/lightbulb" + get_lightbulb_ct
-                    client.subscribe(notification_topic)
+                    #notification_topic = f"onem2m/lightbulb/state/lightbulb" + get_lightbulb_ct
+                    #client.subscribe(notification_topic)
                                 
                     #update html website (initialize lightbulbs)
                     if (page_state is True):
@@ -409,7 +402,7 @@ if __name__ == '__main__':
                         requests.post(page_http + '/initialize_bulbs', data={'state': switch_bulb_state})   
             except requests.exceptions.RequestException as e:
                 print("Error:", e)
-        if (len(ips_onem2m) > 0):
+        if (len(ips_onem2m) > -1):
             while True:
                 if (page_state is False):
                     print("Press '1' for ON/OFF, '2' for changing the controlled lightbulb, 'q' to quit")
@@ -515,7 +508,7 @@ if __name__ == '__main__':
         #request_body_subscription["m2m:sub"]["rn"] = "lightbulb" + lightbulbCT
         #ola = create_subscription(lightbulb_Instance, request_body_subscription)
         #client.subscribe("lightbulb" + lightbulbCT)
-        #client.loop_forever()
+        client.loop_forever()
     # Clean up when done
 
 
