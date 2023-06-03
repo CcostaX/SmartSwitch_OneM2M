@@ -344,7 +344,8 @@ if __name__ == '__main__':
 
         #create application entity
         smart_switch_AE = f"{CSE_BASE}"
-        request_body_AE_smartswitch["m2m:ae"]["poa"] = [CSE_BASE + "/smartswitch"]
+        #request_body_AE_smartswitch["m2m:ae"]["poa"] = [CSE_BASE + "/smartswitch"]
+        request_body_AE_smartswitch["m2m:ae"]["poa"] = [mqtt_url]
         create_application_entity(smart_switch_AE, request_body_AE_smartswitch)
 
         #create a container
@@ -491,7 +492,8 @@ if __name__ == '__main__':
 
         print(lightbulb_AE)
         #create application entity for smart switch and lightbulbs  
-        request_body_AE_lightbulb["m2m:ae"]["poa"] = [CSE_BASE + "/lightbulb"]
+        #request_body_AE_lightbulb["m2m:ae"]["poa"] = [CSE_BASE + "/lightbulb"]
+        request_body_AE_lightbulb["m2m:ae"]["poa"] = [mqtt_url]
         create_application_entity(lightbulb_AE, request_body_AE_lightbulb)
 
         #create a container for each AE
