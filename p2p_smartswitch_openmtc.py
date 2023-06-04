@@ -79,7 +79,7 @@ request_body_AE_smartswitch = {
     "m2m:ae": {
         "api": "N.smartswitch",
         "rn": "smartswitch",
-        "rr": True
+        "rr": "true"
     }
 }
 
@@ -88,7 +88,7 @@ request_body_AE_lightbulb = {
         "api": "N.lightbulb",
         "poa": ["http://192.168.1.3:8000/cse-in/lightbulb"],
         "rn": "lightbulb",
-        "rr": True
+        "rr": "true"
     }
 }
 
@@ -197,7 +197,7 @@ def change_value_lightbulb(latest_instance):
 def create_application_entity(url, data):
     headers = {"Content-Type": "application/vnd.onem2m-res+json"}
     response = requests.post(url, headers=headers, data=json.dumps(data))
-    if response.status_code == 201:  # 201 Created
+    if response.status_code == 201 or response.status_code == 200:  # 201 Created
         print("Created successfully")
         return json.loads(response.text)
     else:
@@ -215,7 +215,7 @@ def delete_application_entity(url):
 # Container (POST)
 def create_container(url, data):
     response = requests.post(url, headers=HEADERS_Container, data=json.dumps(data))
-    if response.status_code == 201:  # 201 Created
+    if response.status_code == 201 or response.status_code == 200:  # 201 Created
         print("Created successfully")
         return json.loads(response.text)
     else:
@@ -225,7 +225,7 @@ def create_container(url, data):
 # Container Instance (POST, DELETE)
 def create_container_instance(url, data):
     response = requests.post(url, headers=HEADERS_Instance, data=json.dumps(data))
-    if response.status_code == 201:  # 201 Created
+    if response.status_code == 201 or response.status_code == 200:  # 201 Created
         print("Created successfully")
         return json.loads(response.text)
     else:
@@ -243,7 +243,7 @@ def delete_container_instance(url):
 # subscription (POST)
 def create_subscription(url, data):
     response = requests.post(url, headers=HEADERS_Subscription, data=json.dumps(data))
-    if response.status_code == 201:  # 201 Created
+    if response.status_code == 201 or response.status_code == 200:  # 201 Created
         print("Created successfully")
         return json.loads(response.text)
     else:
@@ -334,7 +334,7 @@ if __name__ == '__main__':
     except requests.exceptions.ConnectionError:
         print('Connection to the server failed. Unable to determine page state.')
         #raise SystemExit
-    
+
     #SMARTSWITCH
     if (role == "smartswitch" or role == "switch"):
         #get the smart switch and lightbulbs AE if already existed
