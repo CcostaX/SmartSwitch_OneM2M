@@ -304,6 +304,7 @@ if __name__ == '__main__':
     # MQTT Broker URL and Port
     print("Finding broker...")
     broker_url = discoverIP.discover_ips_on_mosquitto(localIP)
+    broker_url = "0.0.0.0"
     broker_port = 1883 
 
     mqtt_url = "mqtt://" + str(broker_url) + ":" + str(broker_port)
@@ -488,6 +489,8 @@ if __name__ == '__main__':
         lightbulb_container = f"{CSE_BASE}/lightbulb"
         lightbulb_Instance = f"{CSE_BASE}/lightbulb/state"
 
+        client.loop_start()
+
         if get_CSE_IN(lightbulb_container) is not None:
             delete_application_entity(lightbulb_container)
 
@@ -500,16 +503,19 @@ if __name__ == '__main__':
         #create a container for each AE
         create_container(lightbulb_container, request_body_container)
 
-        #create a container instance for each AE container
-        create_container_instance(lightbulb_Instance, request_body_instance_lightbulb)
-
         #extract the last number of the local ip and subscribe to the respective lightbulb
         lightbulbCT = get_CSE_IN(lightbulb_container)['m2m:ae']['ct'].replace(",", "")
         print("lightbulb" + lightbulbCT)
 
+        #create subscription
         #request_body_subscription["m2m:sub"]["nu"] = [mqtt_url]
         #request_body_subscription["m2m:sub"]["rn"] = "lightbulb" + lightbulbCT
-        #ola = create_subscription(lightbulb_Instance, request_body_subscription)
+        #create_subscription(lightbulb_Instance, request_body_subscription)
+
+        #create a container instance for each AE container
+        create_container_instance(lightbulb_Instance, request_body_instance_lightbulb)
+
+
         #client.subscribe("lightbulb" + lightbulbCT)
         client.loop_forever()
     # Clean up when done
