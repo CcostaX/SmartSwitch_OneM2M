@@ -258,6 +258,7 @@ client = mqtt.Client()
 
 def on_connect(client, userdata, flags, rc):
     print('Connected to MQTT broker')
+    client.subscribe("#")
   
 def on_message(client, userdata, msg):
     try:
