@@ -198,7 +198,7 @@ def create_application_entity(url, data):
     headers = {"Content-Type": "application/vnd.onem2m-res+json"}
     response = requests.post(url, headers=headers, data=json.dumps(data))
     if response.status_code == 201 or response.status_code == 200:  # 201 Created
-        print("Created successfully")
+        print("Created AE successfully")
         return json.loads(response.text)
     else:
         print(f"Error creating resource: {response.status_code}")
@@ -216,7 +216,7 @@ def delete_application_entity(url):
 def create_container(url, data):
     response = requests.post(url, headers=HEADERS_Container, data=json.dumps(data))
     if response.status_code == 201 or response.status_code == 200:  # 201 Created
-        print("Created successfully")
+        print("Created CNT successfully")
         return json.loads(response.text)
     else:
         print(f"Error creating resource: {response.status_code}")
@@ -226,7 +226,7 @@ def create_container(url, data):
 def create_container_instance(url, data):
     response = requests.post(url, headers=HEADERS_Instance, data=json.dumps(data))
     if response.status_code == 201 or response.status_code == 200:  # 201 Created
-        print("Created successfully")
+        print("Created CIN successfully")
         return json.loads(response.text)
     else:
         print(f"Error creating resource: {response.status_code}")
@@ -244,7 +244,7 @@ def delete_container_instance(url):
 def create_subscription(url, data):
     response = requests.post(url, headers=HEADERS_Subscription, data=json.dumps(data))
     if response.status_code == 201 or response.status_code == 200:  # 201 Created
-        print("Created successfully")
+        print("Created SUB successfully")
         return json.loads(response.text)
     else:
         print(f"Error creating resource: {response.status_code}")
@@ -258,7 +258,7 @@ client = mqtt.Client()
 
 def on_connect(client, userdata, flags, rc):
     print('Connected to MQTT broker')
-    client.subscribe("#")
+    #client.subscribe("#")
   
 def on_message(client, userdata, msg):
     try:
@@ -304,7 +304,7 @@ if __name__ == '__main__':
     # MQTT Broker URL and Port
     print("Finding broker...")
     broker_url = discoverIP.discover_ips_on_mosquitto(localIP)
-    broker_url = "0.0.0.0"
+    #broker_url = "0.0.0.0"
     broker_port = 1883 
 
     mqtt_url = "mqtt://" + str(broker_url) + ":" + str(broker_port)
@@ -315,7 +315,8 @@ if __name__ == '__main__':
     client.on_message = on_message
 
     # Connect to the MQTT broker
-    client.connect(broker_url, broker_port, keepalive=60)
+    client.connect(broker_url, broker_port)
+    client.loop_start()
 
     #Connect to HTML page
     page_state = False
@@ -358,6 +359,8 @@ if __name__ == '__main__':
         smart_switch_Instance = f"{CSE_BASE}/smartswitch/state"
         create_container_instance(smart_switch_Instance, request_body_instance_smartswitch)
         
+        print(get_CSE_IN(smart_switch_Instance))
+
         #create subscription for switch
         request_body_subscription["m2m:sub"]["nu"] = [mqtt_url]
         request_body_subscription["m2m:sub"]["rn"] = role
@@ -365,6 +368,8 @@ if __name__ == '__main__':
 
         ips = discoverIP.discoverIPS()
         ips_onem2m = []
+        #ips_onem2m.append("10.0.2.15")
+
         lightbulb_switch_Container = f"{CSE_BASE}/lightbulb"
         n_of_bulbs = 0
         print("Finding IPs with port 8000 and contains lightbulbs...")
@@ -405,7 +410,7 @@ if __name__ == '__main__':
                         requests.post(page_http + '/initialize_bulbs', data={'state': switch_bulb_state})   
             except requests.exceptions.RequestException as e:
                 print("Error:", e)
-        if (len(ips_onem2m) > -1):
+        if (len(ips_onem2m) > 0):
             while True:
                 if (page_state is False):
                     print("Press '1' for ON/OFF, '2' for changing the controlled lightbulb, 'q' to quit")
@@ -489,8 +494,6 @@ if __name__ == '__main__':
         lightbulb_container = f"{CSE_BASE}/lightbulb"
         lightbulb_Instance = f"{CSE_BASE}/lightbulb/state"
 
-        client.loop_start()
-
         if get_CSE_IN(lightbulb_container) is not None:
             delete_application_entity(lightbulb_container)
 
@@ -508,9 +511,9 @@ if __name__ == '__main__':
         print("lightbulb" + lightbulbCT)
 
         #create subscription
-        #request_body_subscription["m2m:sub"]["nu"] = [mqtt_url]
-        #request_body_subscription["m2m:sub"]["rn"] = "lightbulb" + lightbulbCT
-        #create_subscription(lightbulb_Instance, request_body_subscription)
+        request_body_subscription["m2m:sub"]["nu"] = [mqtt_url]
+        request_body_subscription["m2m:sub"]["rn"] = "lightbulb" + lightbulbCT
+        create_subscription(lightbulb_Instance, request_body_subscription)
 
         #create a container instance for each AE container
         create_container_instance(lightbulb_Instance, request_body_instance_lightbulb)
